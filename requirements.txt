@@ -1,36 +1,33 @@
+# Web framework
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+
 # Core LangChain Dependencies
 langchain==0.1.13
 langchain-groq==0.1.1
 langchain-chroma==0.1.1
 langchain-core==0.1.33
 langchain-community==0.0.33
+langchain-google-genai==1.0.1
 
 # Vector Database
 chromadb==0.4.24
 
-# Embeddings
+# Embeddings (CPU-only torch — keeps build size small)
 sentence-transformers==2.2.2
-torch==2.1.2
-torchvision==0.16.2
-torchaudio==2.1.2
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2+cpu
 
-# LLM Provider
+# LLM Providers
 groq==0.4.2
+google-generativeai==0.4.1
 
 # Document Processing
 PyPDF2==3.0.1
 pypdf==4.0.1
 
-# Configuration
+# Configuration & Utilities
 python-dotenv==1.0.0
-
-# Utilities
 requests==2.31.0
 pydantic==2.5.2
 numpy==1.24.3
-pandas==2.1.4
-
-# Development & Testing
-pytest==7.4.3
-black==23.12.1
-flake8==6.1.0
