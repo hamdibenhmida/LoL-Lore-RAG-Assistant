@@ -13,10 +13,8 @@ langchain-google-genai==1.0.1
 # Vector Database
 chromadb==0.4.24
 
-# Embeddings (CPU-only torch — keeps build size small)
+# Embeddings (torch installed separately in Dockerfile with CPU-only wheel)
 sentence-transformers==2.2.2
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.2+cpu
 
 # LLM Providers
 groq==0.4.2
