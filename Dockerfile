@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # Install CPU-only torch before the rest to avoid pulling the GPU wheel
-RUN pip install --no-cache-dir torch==2.1.2+cpu \
+RUN pip install --no-cache-dir torch==2.4.1+cpu \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
 RUN pip install --no-cache-dir -r requirements.txt
