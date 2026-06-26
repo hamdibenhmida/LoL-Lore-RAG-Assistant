@@ -14,7 +14,7 @@ langchain-google-genai==1.0.1
 chromadb==0.4.24
 
 # Embeddings (torch installed separately in Dockerfile with CPU-only wheel)
-sentence-transformers==2.2.2
+sentence-transformers==2.7.0
 
 # LLM Providers
 groq==0.4.2
