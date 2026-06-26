@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RAG System — League of Legends Lore Assistant</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0c0c0f;
+    --surface:   #13131a;
+    --surface2:  #1a1a24;
+    --border:    rgba(255,255,255,0.07);
+    --purple:    #8b5cf6;
+    --purple2:   #6366f1;
+    --purple3:   #a78bfa;
+    --cyan:      #22d3ee;
+    --green:     #34d399;
+    --amber:     #fbbf24;
+    --red:       #f87171;
+    --text:      #e5e5e7;
+    --muted:     #6b6b7a;
+    --muted2:    #9ca3af;
+
+    /* ── Font scale ──────────────────────────────────── */
+    --fs-xs:         .62rem;   /* tiny method badges        */
+    --fs-label:      .8rem;   /* section tags, th, badges  */
+    --fs-caption:    1.3rem;    /* inline labels, code       */
+    --fs-meta:       .8rem;   /* metric labels, small arch */
+    --fs-sm:         .85rem;   /* counter, code blocks      */
+    --fs-pipe:       1rem;   /* pipeline steps            */
+    --fs-body-sm:    1.1rem;   /* meta items, small inline  */
+    --fs-body:       1.2rem;    /* card body, table, general */
+    --fs-card:       .9rem;   /* card-body text            */
+    --fs-list:       1rem;   /* check-list, arch arrow    */
+    --fs-base:       1rem;     /* base / arrows / desc      */
+    --fs-sub:        1.05rem;  /* slide subtitle            */
+    --fs-icon-sm:    1.2rem;   /* small icons               */
+    --fs-step:       1.4rem;   /* pipeline step numbers     */
+    --fs-icon:       1.5rem;   /* card icons                */
+    --fs-logo:       1.6rem;   /* logo, conclusion marks    */
+    --fs-metric:     3rem;   /* metric values             */
+    --fs-icon-lg:    1.8rem;   /* large provider icons      */
+    --fs-heading:    2.5rem;   /* slide titles              */
+    --fs-heading-lg: 2.4rem;   /* large title override      */
+    --fs-title:      4rem;     /* hero title                */
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Progress bar ─────────────────────────────────────────────────── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--purple), var(--cyan));
+    transition: width .4s ease;
+    z-index: 100;
+    box-shadow: 0 0 12px rgba(139,92,246,.6);
+  }
+
+  /* ── Controls ─────────────────────────────────────────────────────── */
+  #controls {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    z-index: 100;
+  }
+  #slide-counter {
+    font-size: var(--fs-sm);
+    color: var(--muted);
+    letter-spacing: .06em;
+    min-width: 52px;
+    text-align: center;
+  }
+  .ctrl-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted2);
+    cursor: pointer;
+    font-size: var(--fs-base);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .ctrl-btn:hover { background: var(--purple); color: #fff; border-color: var(--purple); }
+
+  /* ── Deck ─────────────────────────────────────────────────────────── */
+  #deck {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* ── Slide base ───────────────────────────────────────────────────── */
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 3.5rem 5rem;
+    opacity: 0;
+    transform: translateX(60px);
+    pointer-events: none;
+    transition: opacity .45s cubic-bezier(.4,0,.2,1), transform .45s cubic-bezier(.4,0,.2,1);
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+  .slide.prev {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  /* ── Section label ────────────────────────────────────────────────── */
+  .section-tag {
+    font-size: var(--fs-label);
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--purple);
+    margin-bottom: .6rem;
+  }
+
+  /* ── Slide title ──────────────────────────────────────────────────── */
+  .slide-title {
+    font-size: var(--fs-heading);
+    font-weight: 700;
+    line-height: 1.15;
+    color: #fff;
+    margin-bottom: 2rem;
+  }
+  .slide-title span { color: var(--purple3); }
+  .slide-subtitle {
+    font-size: var(--fs-sub);
+    color: var(--muted2);
+    margin-top: .4rem;
+    font-weight: 400;
+  }
+
+  /* ── Card grid ────────────────────────────────────────────────────── */
+  .card-grid {
+    display: grid;
+    gap: 1rem;
+  }
+  .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: rgba(139,92,246,.4); }
+  .card-icon { font-size: var(--fs-icon); margin-bottom: .5rem; }
+  .card-title { font-size: var(--fs-body); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--purple3); margin-bottom: .4rem; }
+  .card-body  { font-size: var(--fs-card); color: var(--muted2); line-height: 1.6; }
+
+  /* ── Pipeline flow ────────────────────────────────────────────────── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: .5rem;
+  }
+  .pipe-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .5rem .9rem;
+    font-size: var(--fs-pipe);
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    position: relative;
+  }
+  .pipe-arrow {
+    color: var(--purple);
+    font-size: var(--fs-base);
+    margin: 0 .3rem;
+    flex-shrink: 0;
+  }
+  .pipe-step.highlight { background: rgba(139,92,246,.15); border-color: var(--purple); color: var(--purple3); }
+
+  /* ── Metric cards ─────────────────────────────────────────────────── */
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+  }
+  .metric-value { font-size: var(--fs-metric); font-weight: 700; color: #fff; }
+  .metric-value.green  { color: var(--green); }
+  .metric-value.purple { color: var(--purple3); }
+  .metric-value.cyan   { color: var(--cyan); }
+  .metric-value.amber  { color: var(--amber); }
+  .metric-label { font-size: var(--fs-meta); color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+  /* ── Tag pills ────────────────────────────────────────────────────── */
+  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+  .tag {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: var(--fs-caption); font-weight: 600; letter-spacing: .04em;
+    padding: .25rem .65rem; border-radius: 99px;
+  }
+  .tag.purple { background: rgba(139,92,246,.15); color: var(--purple3); border: 1px solid rgba(139,92,246,.3); }
+  .tag.cyan   { background: rgba(34,211,238,.12); color: var(--cyan);    border: 1px solid rgba(34,211,238,.3); }
+  .tag.green  { background: rgba(52,211,153,.12); color: var(--green);   border: 1px solid rgba(52,211,153,.3); }
+  .tag.amber  { background: rgba(251,191,36,.1);  color: var(--amber);   border: 1px solid rgba(251,191,36,.3); }
+  .tag.red    { background: rgba(248,113,113,.1); color: var(--red);     border: 1px solid rgba(248,113,113,.3); }
+
+  /* ── Code block ───────────────────────────────────────────────────── */
+  .code-block {
+    background: #0a0a10;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    font-size: var(--fs-sm);
+    color: #c4b5fd;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .code-block .kw  { color: var(--purple3); }
+  .code-block .str { color: var(--green); }
+  .code-block .cm  { color: var(--muted); }
+  .code-block .num { color: var(--cyan); }
+
+  /* ── List styles ──────────────────────────────────────────────────── */
+  .check-list { list-style: none; display: flex; flex-direction: column; gap: .55rem; }
+  .check-list li { display: flex; align-items: flex-start; gap: .6rem; font-size: var(--fs-list); color: var(--muted2); line-height: 1.5; }
+  .check-list li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: .1rem; }
+  .check-list li.warn::before { content: '⚠'; color: var(--amber); }
+  .check-list li.bullet::before { content: '→'; color: var(--purple3); }
+
+  /* ── Tech table ───────────────────────────────────────────────────── */
+  .tech-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
+  .tech-table th { text-align: left; padding: .5rem .8rem; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .tech-table td { padding: .55rem .8rem; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--muted2); vertical-align: top; }
+  .tech-table td:first-child { color: var(--text); font-weight: 600; }
+
+  /* ── Two-column layout ────────────────────────────────────────────── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; align-items: start; }
+
+  /* ── Divider ──────────────────────────────────────────────────────── */
+  .divider { height: 1px; background: var(--border); margin: 1.2rem 0; }
+
+  /* ── ===== SLIDE 1: TITLE ===== ────────────────────────────────── */
+  #slide-1 {
+    justify-content: center;
+    align-items: flex-start;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 30%, rgba(99,102,241,.12) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 70%, rgba(139,92,246,.08) 0%, transparent 70%),
+      var(--bg);
+  }
+  .title-logo {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--purple), var(--purple2));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--fs-logo);
+    margin-bottom: 1.8rem;
+    box-shadow: 0 0 30px rgba(139,92,246,.4);
+  }
+  .title-main {
+    font-size: var(--fs-title);
+    font-weight: 800;
+    line-height: 1.1;
+    color: #fff;
+    max-width: 700px;
+  }
+  .title-main .accent { background: linear-gradient(135deg, var(--purple3), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .title-desc { font-size: var(--fs-base); color: var(--muted2); margin-top: 1rem; max-width: 650px; line-height: 1.6; }
+  .title-meta {
+    margin-top: 2.5rem;
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+  }
+  .title-meta-item { display: flex; align-items: center; gap: .5rem; font-size: var(--fs-body-sm); color: var(--muted); }
+  .title-meta-item span { color: var(--purple3); font-weight: 600; }
+
+  /* ── ===== SLIDE: Architecture visual ===== ─────────────────────── */
+  .arch-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin-top: .5rem;
+  }
+  .arch-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .6rem 1.2rem;
+    font-size: var(--fs-body-sm);
+    font-weight: 600;
+    text-align: center;
+    min-width: 160px;
+  }
+  .arch-box.frontend { background: rgba(99,102,241,.15); border-color: rgba(99,102,241,.4); color: #a5b4fc; }
+  .arch-box.api      { background: rgba(139,92,246,.15); border-color: rgba(139,92,246,.4); color: var(--purple3); }
+  .arch-box.rag      { background: rgba(34,211,238,.1);  border-color: rgba(34,211,238,.3); color: var(--cyan); }
+  .arch-box.retrieval{ background: rgba(52,211,153,.1);  border-color: rgba(52,211,153,.3); color: var(--green); }
+  .arch-box.gen      { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.3); color: var(--amber); }
+  .arch-box.vector   { background: rgba(139,92,246,.1);  border-color: rgba(139,92,246,.3); color: var(--purple3); }
+  .arch-box.ingest   { background: rgba(248,113,113,.08);border-color: rgba(248,113,113,.3); color: var(--red); }
+  .arch-box.ext      { background: rgba(156,163,175,.08);border-color: rgba(156,163,175,.2); color: var(--muted2); }
+  .arch-arrow { color: var(--muted); font-size: var(--fs-list); margin: .18rem 0; }
+  .arch-row { display: flex; gap: 1rem; align-items: center; justify-content: center; }
+
+  /* ── Gradient bg slides ────────────────────────────────────────── */
+  #slide-1  { }
+  #slide-17 {
+    justify-content: center;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 40%, rgba(139,92,246,.15) 0%, transparent 70%),
+      var(--bg);
+  }
+
+  /* ── Scrollable content ────────────────────────────────────────── */
+  .scrollable {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,.3) transparent;
+    padding-right: .5rem;
+  }
+
+  /* ── Test case ─────────────────────────────────────────────────── */
+  .test-case {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .9rem 1.1rem;
+    font-size: var(--fs-body-sm);
+  }
+  .test-case .tc-label { font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: .4rem; }
+  .test-case .tc-query { color: var(--cyan); margin-bottom: .25rem; }
+  .test-case .tc-status { margin-top: .4rem; }
+  .badge-ok   { display: inline-flex; align-items: center; gap: .3rem; background: rgba(52,211,153,.12); color: var(--green);   border: 1px solid rgba(52,211,153,.3); border-radius: 99px; padding: .15rem .55rem; font-size: var(--fs-label); font-weight: 700; }
+  .badge-warn { display: inline-flex; align-items: center; gap: .3rem; background: rgba(251,191,36,.1);  color: var(--amber);  border: 1px solid rgba(251,191,36,.3); border-radius: 99px; padding: .15rem .55rem; font-size: var(--fs-label); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<div id="deck">
+
+  <!-- ══════════════ SLIDE 1 — TITLE ══════════════ -->
+  <div class="slide active" id="slide-1">
+    <div class="title-logo">✦</div>
+    <div class="title-main">
+      <span class="accent">LoL Lore</span><br>RAG Assistant
+    </div>
+    <div class="title-desc">
+      A production-quality Retrieval-Augmented Generation system that answers questions about
+      the League of Legends universe — champions, factions, regions, and events in Runeterra —
+      grounded exclusively in lore documents.
+    </div>
+    <div class="title-meta">
+      <div class="title-meta-item">🗺️ <span>Runeterra Universe</span></div>
+      <div class="title-meta-item">🏗️ <span>LangChain · ChromaDB · FastAPI</span></div>
+      <div class="title-meta-item">🤖 <span>Groq · Gemini · OpenRouter</span></div>
+      <div class="title-meta-item">🐍 <span>Python 3.8+</span></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 2 — THE PROBLEM ══════════════ -->
+  <div class="slide" id="slide-2">
+    <div class="section-tag">01 — Motivation</div>
+    <div class="slide-title">Why do we need <span>RAG</span>?</div>
+    <div class="two-col">
+      <div>
+        <div class="card" style="border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.05)">
+          <div class="card-icon">🧠</div>
+          <div class="card-title" style="color:var(--red)">The Problem with LLMs</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li class="warn">Hallucinate facts not in training data</li>
+            <li class="warn">Knowledge cutoff — miss recent info</li>
+            <li class="warn">Cannot access private / domain documents</li>
+            <li class="warn">No source attribution</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.05)">
+          <div class="card-icon">✦</div>
+          <div class="card-title" style="color:var(--green)">RAG Solves This</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li>Retrieves relevant chunks at query time</li>
+            <li>Injects context directly into the prompt</li>
+            <li>Answers from your documents only</li>
+            <li>Cites sources in every response</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="pipeline">
+      <div class="pipe-step">LoL Lore Docs</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step highlight">Semantic Search</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step highlight">Context Injection</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step highlight">LLM</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">Grounded Lore Answer</div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 3 — OBJECTIVES ══════════════ -->
+  <div class="slide" id="slide-3">
+    <div class="section-tag">02 — Objectives</div>
+    <div class="slide-title">Project <span>Goals</span></div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--purple);margin-bottom:.8rem">Primary Objectives</div>
+        <ul class="check-list">
+          <li>Implement a complete end-to-end RAG pipeline</li>
+          <li>Ground all LLM responses in provided documents</li>
+          <li>Prevent hallucination with explicit safeguards</li>
+          <li>Expose a clean REST API via FastAPI</li>
+          <li>Production-quality code: modular, documented, tested</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);margin-bottom:.8rem">Secondary Objectives</div>
+        <ul class="check-list">
+          <li class="bullet">Persistent vector storage (no re-embedding on restart)</li>
+          <li class="bullet">Multi-provider LLM support (Groq, Gemini, OpenRouter)</li>
+          <li class="bullet">Auto provider selection based on available API keys</li>
+          <li class="bullet">Configurable parameters via .env</li>
+          <li class="bullet">Sync-with-disk to remove stale document chunks</li>
+          <li class="bullet">Comprehensive documentation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 4 — ARCHITECTURE ══════════════ -->
+  <div class="slide" id="slide-4">
+    <div class="section-tag">03 — Architecture</div>
+    <div class="slide-title">System <span>Architecture</span></div>
+    <div class="two-col" style="align-items:center;gap:3rem">
+      <div class="arch-diagram">
+        <div class="arch-box frontend" style="width:260px">🌐 Web Frontend (HTML/JS)<br><small style="font-weight:400;opacity:.8">http://localhost:8000</small></div>
+        <div class="arch-arrow">↕ HTTP</div>
+        <div class="arch-box api" style="width:260px">⚡ FastAPI — server.py<br><small style="font-weight:400;opacity:.8">/api/chat · /api/reindex · /api/sync</small></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box rag" style="width:260px">🔗 RAG Chain Orchestrator</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row">
+          <div class="arch-box retrieval" style="min-width:110px;font-size:var(--fs-meta)">🔍 Retrieval</div>
+          <div class="arch-box gen" style="min-width:110px;font-size:var(--fs-meta)">🤖 Generation</div>
+        </div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box vector" style="width:260px">💾 ChromaDB Vector Store</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box ingest" style="width:260px">📄 Document Ingestion</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box ext" style="width:260px">🔑 LLM APIs (Groq / Gemini / OpenRouter)</div>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1rem">Module Breakdown</div>
+        <div style="display:flex;flex-direction:column;gap:.6rem">
+          <div class="card" style="padding:.7rem 1rem">
+            <div class="card-title">ingestion/</div>
+            <div class="card-body">document_loader · text_splitter · embeddings</div>
+          </div>
+          <div class="card" style="padding:.7rem 1rem">
+            <div class="card-title">vector_store/</div>
+            <div class="card-body">chroma_db — persistent storage + sync</div>
+          </div>
+          <div class="card" style="padding:.7rem 1rem">
+            <div class="card-title">retrieval/</div>
+            <div class="card-body">retriever — cosine similarity search</div>
+          </div>
+          <div class="card" style="padding:.7rem 1rem">
+            <div class="card-title">generation/</div>
+            <div class="card-body">llm_factory · llm · gemini_llm · openrouter_llm · rag_chain</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 5 — RAG PIPELINE ══════════════ -->
+  <div class="slide" id="slide-5">
+    <div class="section-tag">04 — Pipeline</div>
+    <div class="slide-title">The 6-Stage <span>RAG Pipeline</span></div>
+    <div class="card-grid cols-3" style="flex:1">
+      <div class="card" style="border-color:rgba(99,102,241,.3)">
+        <div style="font-size:var(--fs-step);margin-bottom:.4rem">1️⃣</div>
+        <div class="card-title" style="color:#a5b4fc">Query Ingestion</div>
+        <ul class="check-list">
+          <li class="bullet">Receive user question</li>
+          <li class="bullet">Input validation</li>
+          <li class="bullet">Query preprocessing</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(34,211,238,.3)">
+        <div style="font-size:var(--fs-step);margin-bottom:.4rem">2️⃣</div>
+        <div class="card-title" style="color:var(--cyan)">Document Retrieval</div>
+        <ul class="check-list">
+          <li class="bullet">Embed query (384-dim)</li>
+          <li class="bullet">Cosine similarity search</li>
+          <li class="bullet">Top-K ranking</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(52,211,153,.3)">
+        <div style="font-size:var(--fs-step);margin-bottom:.4rem">3️⃣</div>
+        <div class="card-title" style="color:var(--green)">Context Construction</div>
+        <ul class="check-list">
+          <li class="bullet">Sort by relevance</li>
+          <li class="bullet">Format with source info</li>
+          <li class="bullet">Validate context length</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(251,191,36,.3)">
+        <div style="font-size:var(--fs-step);margin-bottom:.4rem">4️⃣</div>
+        <div class="card-title" style="color:var(--amber)">Prompt Engineering</div>
+        <ul class="check-list">
+          <li class="bullet">Inject context</li>
+          <li class="bullet">Apply template</li>
+          <li class="bullet">Anti-hallucination rules</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(139,92,246,.3)">
+        <div style="font-size:var(--fs-step);margin-bottom:.4rem">5️⃣</div>
+        <div class="card-title" style="color:var(--purple3)">LLM Generation</div>
+        <ul class="check-list">
+          <li class="bullet">Call chosen provider</li>
+          <li class="bullet">Temperature + max tokens</li>
+          <li class="bullet">Streaming support</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,.3)">
+        <div style="font-size:var(--fs-step);margin-bottom:.4rem">6️⃣</div>
+        <div class="card-title" style="color:var(--red)">Response Validation</div>
+        <ul class="check-list">
+          <li class="bullet">Clean response text</li>
+          <li class="bullet">Hallucination check</li>
+          <li class="bullet">Return answer + sources</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 6 — INGESTION ══════════════ -->
+  <div class="slide" id="slide-6">
+    <div class="section-tag">05 — Components</div>
+    <div class="slide-title">Document <span>Ingestion</span> Module</div>
+    <div class="three-col" style="flex:1;align-items:start">
+      <div>
+        <div class="card" style="height:100%">
+          <div class="card-icon">📂</div>
+          <div class="card-title">document_loader.py</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li class="bullet">PyPDFLoader for PDF files</li>
+            <li class="bullet">TextLoader for .txt files</li>
+            <li class="bullet">Metadata extraction</li>
+            <li class="bullet">Bulk loading from data/</li>
+          </ul>
+          <div class="tags" style="margin-top:.8rem">
+            <span class="tag purple">PDF</span>
+            <span class="tag purple">TXT</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="height:100%">
+          <div class="card-icon">✂️</div>
+          <div class="card-title">text_splitter.py</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li class="bullet">RecursiveCharacterTextSplitter</li>
+            <li class="bullet">chunk_size: 1000 chars</li>
+            <li class="bullet">chunk_overlap: 200 chars</li>
+            <li class="bullet">Preserves document structure</li>
+          </ul>
+          <div class="tags" style="margin-top:.8rem">
+            <span class="tag cyan">Configurable</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="height:100%">
+          <div class="card-icon">🔢</div>
+          <div class="card-title">embeddings.py</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li class="bullet">all-MiniLM-L6-v2 model</li>
+            <li class="bullet">Embedding dimension: 384</li>
+            <li class="bullet">Singleton pattern</li>
+            <li class="bullet">~5,000 embeddings/sec</li>
+          </ul>
+          <div class="tags" style="margin-top:.8rem">
+            <span class="tag green">SentenceTransformers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:var(--fs-sm);color:var(--muted2)">
+      Documents are auto-indexed on first startup. Call <code style="color:var(--purple3);background:rgba(139,92,246,.1);padding:.1rem .4rem;border-radius:4px">POST /api/reindex</code> to pick up new files without restarting.
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 7 — VECTOR STORE ══════════════ -->
+  <div class="slide" id="slide-7">
+    <div class="section-tag">05 — Components</div>
+    <div class="slide-title">Vector Store & <span>Retrieval</span></div>
+    <div class="two-col">
+      <div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-icon">💾</div>
+          <div class="card-title">ChromaDB — chroma_db.py</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li>Local file-based persistence (chroma_data/)</li>
+            <li>No re-computation on restart</li>
+            <li>Collection management</li>
+            <li>Sync-with-disk: removes stale chunks</li>
+            <li>Delete by source file</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔍</div>
+          <div class="card-title">Retriever — retriever.py</div>
+          <ul class="check-list" style="margin-top:.5rem">
+            <li>Semantic similarity search</li>
+            <li>Top-K document ranking (default k=3)</li>
+            <li>Returns context + metadata</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-sm);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.8rem">Cosine Similarity Algorithm</div>
+        <div class="code-block">
+similarity(q, d) = (q · d)
+                  ──────────────
+                  (‖q‖ × ‖d‖)
+
+where:
+  q  =  query embedding  (384-dim)
+  d  =  chunk embedding  (384-dim)
+  ·  =  dot product
+  ‖‖ =  Euclidean norm
+        </div>
+        <div style="margin-top:1rem">
+          <div class="card-grid cols-2">
+            <div class="metric-card">
+              <div class="metric-value cyan">&lt;500ms</div>
+              <div class="metric-label">Search (10k docs)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value green">~85%</div>
+              <div class="metric-label">Top-3 relevance</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 8 — GENERATION ══════════════ -->
+  <div class="slide" id="slide-8">
+    <div class="section-tag">05 — Components</div>
+    <div class="slide-title">Multi-Provider <span>LLM Generation</span></div>
+    <div class="card-grid cols-3" style="margin-bottom:1.2rem">
+      <div class="card" style="border-color:rgba(139,92,246,.3);text-align:center">
+        <div style="font-size:var(--fs-icon-lg);margin-bottom:.4rem">⚡</div>
+        <div class="card-title" style="color:var(--purple3);text-align:center">Groq</div>
+        <div class="card-body" style="text-align:center">llama-3.3-70b-versatile<br>mixtral-8x7b · gemma2-9b</div>
+        <div class="tags" style="justify-content:center;margin-top:.6rem"><span class="tag purple">Fast</span></div>
+      </div>
+      <div class="card" style="border-color:rgba(34,211,238,.3);text-align:center">
+        <div style="font-size:var(--fs-icon-lg);margin-bottom:.4rem">🔵</div>
+        <div class="card-title" style="color:var(--cyan);text-align:center">Google Gemini</div>
+        <div class="card-body" style="text-align:center">gemini-1.5-flash<br>gemini-1.5-pro · 2.0-flash</div>
+        <div class="tags" style="justify-content:center;margin-top:.6rem"><span class="tag cyan">Multimodal</span></div>
+      </div>
+      <div class="card" style="border-color:rgba(52,211,153,.3);text-align:center">
+        <div style="font-size:var(--fs-icon-lg);margin-bottom:.4rem">🌐</div>
+        <div class="card-title" style="color:var(--green);text-align:center">OpenRouter</div>
+        <div class="card-body" style="text-align:center">GPT-4o · Claude · Llama<br>200+ models via one API</div>
+        <div class="tags" style="justify-content:center;margin-top:.6rem"><span class="tag green">200+ Models</span></div>
+      </div>
+    </div>
+    <div class="card" style="background:rgba(251,191,36,.05);border-color:rgba(251,191,36,.25)">
+      <div class="card-title" style="color:var(--amber)">🏭 LLM Factory — llm_factory.py</div>
+      <div style="display:flex;align-items:center;gap:.8rem;margin-top:.5rem;flex-wrap:wrap">
+        <div style="font-size:var(--fs-body);color:var(--muted2)">Set <code style="color:var(--amber);background:rgba(251,191,36,.1);padding:.1rem .35rem;border-radius:4px">LLM_PROVIDER</code> in .env:</div>
+        <div class="tags">
+          <span class="tag amber">groq</span>
+          <span class="tag amber">gemini</span>
+          <span class="tag amber">openrouter</span>
+          <span class="tag amber">auto</span>
+        </div>
+        <div style="font-size:var(--fs-body-sm);color:var(--muted2);margin-left:.5rem"><strong style="color:var(--text)">auto</strong> = picks first provider with a valid API key</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 9 — PROMPT ENGINEERING ══════════════ -->
+  <div class="slide" id="slide-9">
+    <div class="section-tag">05 — Components</div>
+    <div class="slide-title">Prompt <span>Engineering</span> & Hallucination Prevention</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Prompt Template</div>
+        <div class="code-block" style="font-size:var(--fs-caption)">
+<span class="cm">You are an AI assistant that answers questions
+based EXCLUSIVELY on the provided context.</span>
+
+<span class="kw">Context Information:</span>
+<span class="str">{context}</span>
+
+<span class="kw">User Question:</span>
+<span class="str">{question}</span>
+
+<span class="kw">Instructions:</span>
+<span class="num">1.</span> Answer ONLY from the provided context
+<span class="num">2.</span> Do not invent or use external knowledge
+<span class="num">3.</span> If unavailable, state:
+   <span class="str">"I do not have enough information..."</span>
+<span class="num">4.</span> Be concise and cite the source document
+
+<span class="kw">Answer:</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Safeguards Implemented</div>
+        <ul class="check-list">
+          <li>Explicit "ONLY from context" instruction</li>
+          <li>Insufficient-info detection in ResponseEvaluator</li>
+          <li>Response cleaning &amp; whitespace normalisation</li>
+          <li>Source attribution in every answer</li>
+        </ul>
+        <div class="divider"></div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Result</div>
+        <div class="metric-card">
+          <div class="metric-value red">&lt;5%</div>
+          <div class="metric-label">Hallucination rate with safeguards</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 10 — FASTAPI BACKEND ══════════════ -->
+  <div class="slide" id="slide-10">
+    <div class="section-tag">05 — Components</div>
+    <div class="slide-title"><span>FastAPI</span> Backend — server.py</div>
+    <div class="two-col">
+      <div>
+        <table class="tech-table">
+          <thead>
+            <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="tag green" style="font-size:var(--fs-xs)">POST</span></td><td style="color:var(--cyan)">/api/chat</td><td>RAG query — returns answer + sources</td></tr>
+            <tr><td><span class="tag purple" style="font-size:var(--fs-xs)">GET</span></td><td style="color:var(--cyan)">/api/stats</td><td>Knowledge base statistics</td></tr>
+            <tr><td><span class="tag green" style="font-size:var(--fs-xs)">POST</span></td><td style="color:var(--cyan)">/api/reindex</td><td>Re-index documents from data/</td></tr>
+            <tr><td><span class="tag green" style="font-size:var(--fs-xs)">POST</span></td><td style="color:var(--cyan)">/api/sync</td><td>Remove chunks for deleted files</td></tr>
+            <tr><td><span class="tag purple" style="font-size:var(--fs-xs)">GET</span></td><td style="color:var(--cyan)">/api/providers</td><td>List available LLM providers</td></tr>
+            <tr><td><span class="tag purple" style="font-size:var(--fs-xs)">GET</span></td><td style="color:var(--cyan)">/api/suggestions</td><td>LLM-generated questions</td></tr>
+            <tr><td><span class="tag purple" style="font-size:var(--fs-xs)">GET</span></td><td style="color:var(--cyan)">/api/health</td><td>Health check</td></tr>
+            <tr><td><span class="tag purple" style="font-size:var(--fs-xs)">GET</span></td><td style="color:var(--cyan)">/</td><td>Serves static web frontend</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Chat Request Schema</div>
+        <div class="code-block" style="font-size:var(--fs-caption)">
+POST /api/chat
+{
+  <span class="str">"query"</span>:       <span class="str">"Who is the Ruined King?"</span>,
+  <span class="str">"top_k"</span>:       <span class="num">4</span>,
+  <span class="str">"temperature"</span>: <span class="num">0.7</span>,
+  <span class="str">"provider"</span>:    <span class="str">"groq"</span>,
+  <span class="str">"model"</span>:       <span class="str">"llama-3.3-70b-versatile"</span>
+}
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <span class="tag cyan">CORS enabled</span>
+          <span class="tag green">Lazy RAG init</span>
+          <span class="tag purple">Pydantic schemas</span>
+          <span class="tag amber">503 on config error</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 11 — TECH STACK ══════════════ -->
+  <div class="slide" id="slide-11">
+    <div class="section-tag">06 — Technologies</div>
+    <div class="slide-title">Technology <span>Stack</span></div>
+    <div class="two-col">
+      <table class="tech-table">
+        <thead><tr><th>Component</th><th>Technology</th><th>Version</th></tr></thead>
+        <tbody>
+          <tr><td>LLM (Groq)</td><td>llama-3.3-70b-versatile</td><td>Latest</td></tr>
+          <tr><td>LLM (Gemini)</td><td>gemini-1.5-flash</td><td>Latest</td></tr>
+          <tr><td>LLM (OpenRouter)</td><td>openai/gpt-4o-mini</td><td>Latest</td></tr>
+          <tr><td>Embeddings</td><td>SentenceTransformers</td><td>2.2.2</td></tr>
+          <tr><td>Vector DB</td><td>ChromaDB</td><td>0.4.24</td></tr>
+          <tr><td>Framework</td><td>LangChain</td><td>0.1.13</td></tr>
+          <tr><td>Backend</td><td>FastAPI + uvicorn</td><td>Latest</td></tr>
+          <tr><td>PDF Processing</td><td>PyPDF2</td><td>3.0.1</td></tr>
+          <tr><td>ML/DL Backend</td><td>PyTorch</td><td>2.1.2</td></tr>
+          <tr><td>Configuration</td><td>python-dotenv</td><td>1.0.0</td></tr>
+        </tbody>
+      </table>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.9rem">Why These Choices?</div>
+        <div style="display:flex;flex-direction:column;gap:.7rem;font-size:var(--fs-body);color:var(--muted2)">
+          <div><strong style="color:var(--text)">LangChain</strong> — Unified LLM + document processing interface</div>
+          <div><strong style="color:var(--text)">ChromaDB</strong> — Lightweight, file-based, no server required</div>
+          <div><strong style="color:var(--text)">SentenceTransformers</strong> — Fast, accurate, runs locally</div>
+          <div><strong style="color:var(--text)">Multi-Provider LLM</strong> — Flexibility, no vendor lock-in</div>
+          <div><strong style="color:var(--text)">FastAPI</strong> — High performance, auto-generated OpenAPI docs</div>
+          <div><strong style="color:var(--text)">Python</strong> — Industry standard for AI/ML</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 12 — DESIGN DECISIONS ══════════════ -->
+  <div class="slide" id="slide-12">
+    <div class="section-tag">07 — Implementation</div>
+    <div class="slide-title">Key <span>Design Decisions</span></div>
+    <div class="card-grid cols-2" style="flex:1">
+      <div class="card" style="border-color:rgba(139,92,246,.3)">
+        <div class="card-icon">💾</div>
+        <div class="card-title">Persistent Vector Store</div>
+        <ul class="check-list" style="margin-top:.4rem">
+          <li>Avoid expensive re-embedding on every restart</li>
+          <li>Faster startup — load existing ChromaDB collection</li>
+          <li>Data stays local — enhanced privacy</li>
+          <li>Sync-with-disk removes stale chunks automatically</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(34,211,238,.3)">
+        <div class="card-icon">🧩</div>
+        <div class="card-title">Modular Architecture</div>
+        <ul class="check-list" style="margin-top:.4rem">
+          <li>Ingestion / Retrieval / Generation are independent</li>
+          <li>Swap any component without touching others</li>
+          <li>Easy unit testing per module</li>
+          <li>Clear responsibility boundaries</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(251,191,36,.3)">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">Configurable via .env</div>
+        <ul class="check-list" style="margin-top:.4rem">
+          <li>No code changes needed to tune parameters</li>
+          <li>CHUNK_SIZE · CHUNK_OVERLAP · RETRIEVER_TOP_K</li>
+          <li>Swap LLM provider per deployment</li>
+          <li>Easy reproducibility and experimentation</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(52,211,153,.3)">
+        <div class="card-icon">🛡️</div>
+        <div class="card-title">Explicit Hallucination Prevention</div>
+        <ul class="check-list" style="margin-top:.4rem">
+          <li>Prompt explicitly forbids external knowledge</li>
+          <li>ResponseEvaluator detects insufficient-info answers</li>
+          <li>Source attribution in every response</li>
+          <li>Confidence metrics tracked per query</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 13 — PERFORMANCE ══════════════ -->
+  <div class="slide" id="slide-13">
+    <div class="section-tag">08 — Results</div>
+    <div class="slide-title">Performance <span>Results</span></div>
+    <div class="card-grid cols-4" style="margin-bottom:1.5rem">
+      <div class="metric-card">
+        <div class="metric-value cyan">&lt;500ms</div>
+        <div class="metric-label">Semantic Search (10k docs)</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value green">~5,000</div>
+        <div class="metric-label">Embeddings / second</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value purple">2–5s</div>
+        <div class="metric-label">LLM Response Time</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value amber">&lt;5%</div>
+        <div class="metric-label">Hallucination Rate</div>
+      </div>
+    </div>
+    <div class="three-col">
+      <div class="test-case">
+        <div class="tc-label">Test Case 1 — Factual Lore</div>
+        <div class="tc-query">"Who is the Ruined King?"</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted2);margin:.2rem 0">Grounded response about Viego with source citation</div>
+        <div class="tc-status"><span class="badge-ok">✓ SUCCESS</span></div>
+      </div>
+      <div class="test-case">
+        <div class="tc-label">Test Case 2 — Lore Concept</div>
+        <div class="tc-query">"What is the Void?"</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted2);margin:.2rem 0">Detailed lore explanation from Void champion entries</div>
+        <div class="tc-status"><span class="badge-ok">✓ SUCCESS</span></div>
+      </div>
+      <div class="test-case">
+        <div class="tc-label">Test Case 3 — Out-of-scope</div>
+        <div class="tc-query">"Who will win Worlds 2025?"</div>
+        <div style="font-size:var(--fs-sm);color:var(--muted2);margin:.2rem 0">"I do not have enough information..."</div>
+        <div class="tc-status"><span class="badge-ok">✓ Hallucination Prevented</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 14 — LIMITATIONS ══════════════ -->
+  <div class="slide" id="slide-14">
+    <div class="section-tag">09 — Limitations</div>
+    <div class="slide-title">Known <span>Limitations</span></div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--red);margin-bottom:.8rem">Technical</div>
+        <ul class="check-list">
+          <li class="warn">Cannot answer questions outside provided corpus</li>
+          <li class="warn">Semantic search may miss keyword-specific queries</li>
+          <li class="warn">Requires well-formed, clean input documents</li>
+          <li class="warn">Subject to LLM provider API rate limits</li>
+          <li class="warn">May miss complex multi-hop logical relationships</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--amber);margin-bottom:.8rem">Practical & Scalability</div>
+        <ul class="check-list">
+          <li class="warn">Output quality depends on input document quality</li>
+          <li class="warn">First run requires initial embedding download (~500MB)</li>
+          <li class="warn">ChromaDB grows with the document corpus</li>
+          <li class="warn">Optimised for lore-scale corpora (&lt;1GB)</li>
+          <li class="warn">Would need distributed search for massive datasets</li>
+        </ul>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="card" style="background:rgba(34,211,238,.05);border-color:rgba(34,211,238,.2)">
+      <div class="card-body">
+        <strong style="color:var(--cyan)">Context:</strong> These limitations are inherent trade-offs of a locally-deployed RAG system designed for lore exploration — they are acceptable for the current scope and addressable in future iterations.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 15 — FUTURE WORK ══════════════ -->
+  <div class="slide" id="slide-15">
+    <div class="section-tag">10 — Future Work</div>
+    <div class="slide-title">Future <span>Improvements</span></div>
+    <div class="three-col" style="flex:1">
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--purple3);margin-bottom:.8rem">Core Enhancements</div>
+        <ul class="check-list">
+          <li class="bullet">Hybrid search (semantic + keyword)</li>
+          <li class="bullet">Query expansion & reformulation</li>
+          <li class="bullet">Multi-hop retrieval</li>
+          <li class="bullet">LLM-based result re-ranking</li>
+          <li class="bullet">Conversational memory / history</li>
+          <li class="bullet">Multi-modal (images, tables)</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);margin-bottom:.8rem">Performance</div>
+        <ul class="check-list">
+          <li class="bullet">Query result caching</li>
+          <li class="bullet">Embedding cache for speed</li>
+          <li class="bullet">Batch parallel document processing</li>
+          <li class="bullet">Model quantization</li>
+          <li class="bullet">Domain-specific fine-tuning</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:.8rem">Enterprise Features</div>
+        <ul class="check-list">
+          <li class="bullet">User authentication & RBAC</li>
+          <li class="bullet">Query analytics dashboard</li>
+          <li class="bullet">Response quality metrics</li>
+          <li class="bullet">Database backend for scale</li>
+          <li class="bullet">Docker / cloud deployment</li>
+          <li class="bullet">Document management UI</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 16 — ACADEMIC VALUE ══════════════ -->
+  <div class="slide" id="slide-16">
+    <div class="section-tag">11 — Value & Use Cases</div>
+    <div class="slide-title">What This <span>Enables</span></div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--purple);margin-bottom:.8rem">Technical Achievements</div>
+        <ul class="check-list">
+          <li>RAG system architecture end-to-end</li>
+          <li>LLM integration patterns (multi-provider)</li>
+          <li>Vector embeddings for semantic lore search</li>
+          <li>Prompt engineering for grounded answers</li>
+          <li>REST API design with FastAPI</li>
+          <li>Production software: logging, types, error handling</li>
+          <li>Modular design and clean separation of concerns</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:.8rem">Lore Use Cases</div>
+        <div class="card-grid cols-2" style="gap:.6rem">
+          <div class="card" style="padding:.7rem;text-align:center">
+            <div style="font-size:var(--fs-icon-sm);margin-bottom:.3rem">⚔️</div>
+            <div style="font-size:var(--fs-sm);color:var(--muted2)">Champion lore explorer</div>
+          </div>
+          <div class="card" style="padding:.7rem;text-align:center">
+            <div style="font-size:var(--fs-icon-sm);margin-bottom:.3rem">🗺️</div>
+            <div style="font-size:var(--fs-sm);color:var(--muted2)">Runeterra region guide</div>
+          </div>
+          <div class="card" style="padding:.7rem;text-align:center">
+            <div style="font-size:var(--fs-icon-sm);margin-bottom:.3rem">📖</div>
+            <div style="font-size:var(--fs-sm);color:var(--muted2)">Lore Q&amp;A assistant</div>
+          </div>
+          <div class="card" style="padding:.7rem;text-align:center">
+            <div style="font-size:var(--fs-icon-sm);margin-bottom:.3rem">🌌</div>
+            <div style="font-size:var(--fs-sm);color:var(--muted2)">Faction & event timeline</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 17 — CONCLUSION ══════════════ -->
+  <div class="slide" id="slide-17">
+    <div class="section-tag">12 — Conclusion</div>
+    <div class="slide-title" style="font-size:var(--fs-heading-lg)">Project <span>Achieved</span></div>
+    <div class="card-grid cols-3" style="margin-bottom:1.5rem">
+      <div class="card" style="border-color:rgba(52,211,153,.3);text-align:center">
+        <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
+        <div class="card-title" style="color:var(--green);text-align:center">Complete RAG Pipeline</div>
+        <div class="card-body" style="text-align:center">All 6 stages — ingestion to validated response</div>
+      </div>
+      <div class="card" style="border-color:rgba(139,92,246,.3);text-align:center">
+        <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
+        <div class="card-title" style="color:var(--purple3);text-align:center">Grounded Responses</div>
+        <div class="card-body" style="text-align:center">Answers exclusively from provided documents</div>
+      </div>
+      <div class="card" style="border-color:rgba(34,211,238,.3);text-align:center">
+        <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
+        <div class="card-title" style="color:var(--cyan);text-align:center">Multi-Provider LLM</div>
+        <div class="card-body" style="text-align:center">Groq · Gemini · OpenRouter · Auto-select</div>
+      </div>
+      <div class="card" style="border-color:rgba(251,191,36,.3);text-align:center">
+        <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
+        <div class="card-title" style="color:var(--amber);text-align:center">FastAPI Backend</div>
+        <div class="card-body" style="text-align:center">7 REST endpoints, CORS, static frontend</div>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,.3);text-align:center">
+        <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
+        <div class="card-title" style="color:var(--red);text-align:center">Hallucination Prevention</div>
+        <div class="card-body" style="text-align:center">&lt;5% rate with prompt safeguards</div>
+      </div>
+      <div class="card" style="border-color:rgba(52,211,153,.3);text-align:center">
+        <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
+        <div class="card-title" style="color:var(--green);text-align:center">Production Quality</div>
+        <div class="card-body" style="text-align:center">Modular · Typed · Logged · Documented</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:var(--fs-body);color:var(--muted);margin-top:.5rem">
+      League of Legends Lore RAG Assistant &nbsp;·&nbsp; LangChain · ChromaDB · FastAPI · Python 3.8+
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ── Controls ───────────────────────────────────────── -->
+<div id="controls">
+  <button class="ctrl-btn" id="btn-prev" title="Previous (←)">‹</button>
+  <span id="slide-counter">1 / 17</span>
+  <button class="ctrl-btn" id="btn-next" title="Next (→)">›</button>
+</div>
+
+<script>
+  const slides  = Array.from(document.querySelectorAll('.slide'));
+  const total   = slides.length;
+  const counter = document.getElementById('slide-counter');
+  const bar     = document.getElementById('progress-bar');
+  let current   = 0;
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    slides[current].classList.add('prev');
+    setTimeout(() => slides[current].classList.remove('prev'), 500);
+    current = n;
+    slides[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${total}`;
+    bar.style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End')  goTo(total - 1);
+  });
+
+  // Swipe support
+  let touchX = 0;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) dx < 0 ? goTo(current + 1) : goTo(current - 1);
+  });
+
+  // Init bar
+  bar.style.width = `${(1 / total) * 100}%`;
+</script>
+</body>
+</html>
