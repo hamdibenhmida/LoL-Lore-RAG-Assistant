@@ -21,7 +21,7 @@ class EmbeddingsGenerator:
         if EmbeddingsGenerator._embeddings is None:
             logger.info("Initialising Google Gemini embeddings")
             EmbeddingsGenerator._embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/embedding-001",
+                model="models/text-embedding-004",
                 google_api_key=Config.GEMINI_API_KEY,
             )
             logger.info("Gemini embeddings ready")

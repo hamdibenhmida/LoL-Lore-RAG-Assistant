@@ -44,7 +44,7 @@ class Config:
     # ===== Embedding Configuration =====
     EMBEDDING_MODEL_NAME: str = os.getenv(
         "EMBEDDING_MODEL_NAME",
-        "models/embedding-001"
+        "models/text-embedding-004"
     )
 
     # ===== Vector Store Configuration =====
