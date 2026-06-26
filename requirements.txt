@@ -13,8 +13,7 @@ langchain-google-genai==1.0.1
 # Vector Database
 chromadb==0.4.24
 
-# Embeddings (ONNX-based, no torch dependency)
-fastembed==0.3.6
+# Embeddings via Google Gemini API (no local model/ONNX runtime needed)
 
 # LLM Providers
 groq==0.4.2

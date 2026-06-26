@@ -42,10 +42,13 @@ class ChromaVectorStore:
         # Create directory if it doesn't exist
         Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
 
-        # Use provided embeddings or create FastEmbed wrapper (ONNX, no torch)
+        # Use provided embeddings or Google Gemini API (no local model needed)
         if embeddings is None:
-            from langchain_community.embeddings import FastEmbedEmbeddings
-            embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            embeddings = GoogleGenerativeAIEmbeddings(
+                model="models/embedding-001",
+                google_api_key=Config.GEMINI_API_KEY,
+            )
 
         self.embeddings = embeddings
         self.vector_store = None

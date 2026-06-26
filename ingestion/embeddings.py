@@ -1,57 +1,47 @@
 """
 Embeddings generation module.
 
-Generates embeddings using FastEmbed (ONNX-based, no torch dependency).
+Uses Google Gemini Embedding API — no local model or ONNX runtime required.
 """
 
 import logging
 from typing import List
-from fastembed import TextEmbedding
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "BAAI/bge-small-en-v1.5"
-
 
 class EmbeddingsGenerator:
-    """Generate embeddings using FastEmbed."""
+    """Generate embeddings using the Google Gemini Embeddings API."""
 
-    _model = None
+    _embeddings = None
 
     def __init__(self, model_name: str = None):
-        self.model_name = model_name or _DEFAULT_MODEL
-
-        if EmbeddingsGenerator._model is None:
-            logger.info(f"Loading embedding model: {self.model_name}")
-            EmbeddingsGenerator._model = TextEmbedding(model_name=self.model_name)
-            logger.info("Embedding model loaded successfully")
-        else:
-            logger.info("Using cached embedding model")
+        if EmbeddingsGenerator._embeddings is None:
+            logger.info("Initialising Google Gemini embeddings")
+            EmbeddingsGenerator._embeddings = GoogleGenerativeAIEmbeddings(
+                model="models/embedding-001",
+                google_api_key=Config.GEMINI_API_KEY,
+            )
+            logger.info("Gemini embeddings ready")
 
     @property
-    def model(self) -> TextEmbedding:
-        return EmbeddingsGenerator._model
+    def model(self) -> GoogleGenerativeAIEmbeddings:
+        return EmbeddingsGenerator._embeddings
 
     def embed_query(self, query: str) -> List[float]:
         if not query:
-            logger.warning("Empty query provided for embedding")
             return []
-        embeddings = list(self.model.embed([query]))
-        return embeddings[0].tolist()
+        return self.model.embed_query(query)
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         if not texts:
-            logger.warning("Empty text list provided for embedding")
             return []
-        logger.info(f"Generating embeddings for {len(texts)} texts")
-        embeddings = [emb.tolist() for emb in self.model.embed(texts)]
-        logger.info(f"Successfully generated {len(embeddings)} embeddings")
-        return embeddings
+        return self.model.embed_documents(texts)
 
     def get_embedding_dimension(self) -> int:
-        sample = list(self.model.embed(["test"]))
-        return len(sample[0])
+        return len(self.embed_query("test"))
 
 
 _embeddings_generator = None
