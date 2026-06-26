@@ -15,6 +15,7 @@ Run with:
 
 import logging
 import sys
+import asyncio
 from pathlib import Path
 
 # ── ensure project root is on the path ────────────────────────────────────────
@@ -317,6 +318,19 @@ async def sync():
     except Exception as e:
         logger.error(f"Sync error: {e}")
         return SyncResponse(success=False, message=str(e))
+
+
+# ── Startup: index documents before accepting requests ────────────────────────
+
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load and index documents on startup so the first request is instant."""
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(None, get_rag_chain)
+        logger.info("Startup indexing complete.")
+    except Exception as e:
+        logger.error(f"Startup indexing failed: {e}")
 
 
 # ── Static files (served last so API routes take priority) ────────────────────
