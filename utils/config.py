@@ -44,7 +44,7 @@ class Config:
     # ===== Embedding Configuration =====
     EMBEDDING_MODEL_NAME: str = os.getenv(
         "EMBEDDING_MODEL_NAME",
-        "sentence-transformers/all-MiniLM-L6-v2"
+        "BAAI/bge-small-en-v1.5"
     )
 
     # ===== Vector Store Configuration =====

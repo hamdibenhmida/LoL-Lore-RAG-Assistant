@@ -11,7 +11,6 @@ from pathlib import Path
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
-from ingestion.embeddings import get_embeddings_generator
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
@@ -43,12 +42,10 @@ class ChromaVectorStore:
         # Create directory if it doesn't exist
         Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
 
-        # Use provided embeddings or create LangChain wrapper
+        # Use provided embeddings or create FastEmbed wrapper (ONNX, no torch)
         if embeddings is None:
-            from langchain_community.embeddings import HuggingFaceEmbeddings
-            embeddings = HuggingFaceEmbeddings(
-                model_name=Config.EMBEDDING_MODEL_NAME
-            )
+            from langchain_community.embeddings import FastEmbedEmbeddings
+            embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
         self.embeddings = embeddings
         self.vector_store = None

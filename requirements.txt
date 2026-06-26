@@ -13,8 +13,8 @@ langchain-google-genai==1.0.1
 # Vector Database
 chromadb==0.4.24
 
-# Embeddings (torch installed separately in Dockerfile with CPU-only wheel)
-sentence-transformers==2.7.0
+# Embeddings (ONNX-based, no torch dependency)
+fastembed==0.3.6
 
 # LLM Providers
 groq==0.4.2
