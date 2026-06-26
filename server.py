@@ -320,17 +320,21 @@ async def sync():
         return SyncResponse(success=False, message=str(e))
 
 
-# ── Startup: index documents before accepting requests ────────────────────────
+# ── Startup: schedule indexing in background so port binds immediately ────────
 
-@app.on_event("startup")
-async def startup_event():
-    """Pre-load and index documents on startup so the first request is instant."""
+async def _index_documents():
     loop = asyncio.get_event_loop()
     try:
         await loop.run_in_executor(None, get_rag_chain)
-        logger.info("Startup indexing complete.")
+        logger.info("Background indexing complete.")
     except Exception as e:
-        logger.error(f"Startup indexing failed: {e}")
+        logger.error(f"Background indexing failed: {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Fire-and-forget: index documents in background, don't block port binding."""
+    asyncio.create_task(_index_documents())
 
 
 # ── Static files (served last so API routes take priority) ────────────────────
