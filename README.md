@@ -1,16 +1,20 @@
-# RAG Chatbot - League of Legends Lore Assistant
+# LoL Lore RAG Assistant
 
-A production-quality Retrieval-Augmented Generation (RAG) system that answers questions based exclusively on the League of Legends universe lore. Built for LoL fans and designed for accurate, grounded responses about champions, factions, history, and events in Runeterra.
+A Retrieval-Augmented Generation (RAG) chatbot that answers questions based exclusively on the League of Legends universe lore. Built for LoL fans and designed for accurate, grounded responses about champions, factions, history, and events in Runeterra.
+
+**Live demo**: https://lol-lore-rag-assistant.onrender.com/
+
+---
 
 ## Features
 
 **Core Features**
-- **Document Loading**: Support for PDF and TXT file formats
-- **Semantic Search**: Intelligent document retrieval using embeddings
+- **Document Loading**: PDF file ingestion and chunking
+- **Semantic Search**: ONNX-based vector search with BAAI/bge-small-en-v1.5
 - **Multi-Provider LLM**: Groq, Google Gemini, and OpenRouter support
-- **Persistent Vector Storage**: ChromaDB with local persistence
+- **Persistent Vector Storage**: ChromaDB with Linux-native HNSW index
 - **Web Interface**: FastAPI backend with HTML/JS frontend
-- **Context Grounding**: Ensures answers are based exclusively on documents
+- **Context Grounding**: Answers are based exclusively on indexed documents
 - **Hallucination Prevention**: Explicit handling of missing information
 
 **Advanced Features**
@@ -21,39 +25,40 @@ A production-quality Retrieval-Augmented Generation (RAG) system that answers qu
 - Re-index and sync endpoints
 - System statistics and monitoring
 
+---
+
 ## Technical Stack
 
 | Component | Technology |
 |-----------|------------|
 | **LLM** | Groq / Google Gemini / OpenRouter |
-| **Default Model** | llama-3.3-70b-versatile (Groq) |
-| **Embeddings** | Sentence Transformers (all-MiniLM-L6-v2) |
-| **Vector DB** | ChromaDB |
+| **Embeddings** | fastembed — BAAI/bge-small-en-v1.5 (ONNX, ~22 MB, no GPU) |
+| **Vector DB** | ChromaDB 1.5.9 (Rust HNSW) |
 | **Framework** | LangChain |
-| **Backend** | FastAPI |
-| **Language** | Python 3.8+ |
+| **Backend** | FastAPI + uvicorn |
+| **Deployment** | Docker on Render (Python 3.11) |
+
+---
 
 ## Project Architecture
 
 ```
 chat-ai/
-├── app.py                          # Launcher (starts uvicorn)
 ├── server.py                       # FastAPI application
+├── preindex.py                     # Builds Chroma index at docker build time
+├── Dockerfile                      # Docker build (index baked in)
 ├── requirements.txt                # Python dependencies
-├── .env                            # Environment variables (local)
-├── .env.example                    # Environment template
-├── start_server.bat                # Windows start script
+├── .env.example                    # Environment variable template
 │
 ├── data/
-│   ├── pdfs/                       # PDF documents directory
-│   └── txt/                        # Text documents directory
+│   └── pdfs/                       # PDF source documents
 │
 ├── frontend/                       # Static web frontend
 │
 ├── ingestion/
-│   ├── document_loader.py          # PDF/TXT loading
+│   ├── document_loader.py          # PDF loading
 │   ├── text_splitter.py            # Document chunking
-│   └── embeddings.py               # Embedding generation
+│   └── embeddings.py               # fastembed embedding generation
 │
 ├── vector_store/
 │   └── chroma_db.py                # ChromaDB management
@@ -69,78 +74,74 @@ chat-ai/
 │   ├── prompt_template.py          # Prompt engineering
 │   └── rag_chain.py                # Complete RAG pipeline
 │
-├── interface/
-│   └── __init__.py
-│
 └── utils/
     └── config.py                   # Configuration management
 ```
 
-## Installation
+---
 
-### 1. Prerequisites
+## How the Index Works
 
-- Python 3.8 or higher
+Documents are never loaded at runtime. Instead:
+
+1. **`docker build`** runs `python preindex.py`, which loads all PDFs from `data/pdfs/`, chunks them, embeds every chunk with fastembed (ONNX), and stores the HNSW index in `chroma_data/` inside the image.
+2. **At startup** the app loads the pre-built index instantly — no PDF processing, no embedding delay.
+3. **Layer caching**: the index build layer is only re-run when `data/` or embedding code changes, not on every code deploy.
+
+---
+
+## Adding New PDFs to the Knowledge Base
+
+1. Copy your PDF into `data/pdfs/`
+2. Commit and push:
+   ```bash
+   git add data/pdfs/your-file.pdf
+   git commit -m "Add PDF: your-file.pdf"
+   git push
+   ```
+3. Render auto-deploys — `docker build` re-runs `preindex.py` with all PDFs (old + new). Build takes ~15 min; subsequent startups are instant.
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- Python 3.11
 - At least one LLM API key (Groq, Gemini, or OpenRouter)
-- Virtual environment (recommended)
 
-### 2. Create Virtual Environment
+### Setup
 
 ```bash
-# Windows
+# Create virtual environment
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```bash
 pip install -r requirements.txt
-```
 
-### 4. Configure Environment
-
-```bash
-# Copy the example .env file
+# Copy and edit environment file
 cp .env.example .env
+# Add your API key(s) to .env
 
-# Edit .env and add your API key(s)
-```
+# Build the vector index (first time, or after adding PDFs)
+python preindex.py
 
-### 5. Add Documents
-
-```bash
-# Place your documents in:
-# - data/pdfs/   (PDF files)
-# - data/txt/    (TXT files)
-cp your_notes.pdf data/pdfs/
-```
-
-## Usage
-
-### Running the Application
-
-```bash
-# Start the FastAPI server
+# Start the server
 uvicorn server:app --reload --port 8000
-
-# Or on Windows, double-click:
-start_server.bat
 ```
 
-The application will be available at `http://localhost:8000`
+The app will be available at `http://localhost:8000`.
 
-### API Endpoints
+---
+
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/chat` | Send a question to the RAG system |
 | GET | `/api/stats` | Knowledge base statistics |
-| POST | `/api/reindex` | Re-index documents from data/ |
+| POST | `/api/reindex` | Re-index documents from `data/` |
 | POST | `/api/sync` | Remove chunks for deleted files |
 | GET | `/api/providers` | List available LLM providers |
 | GET | `/api/suggestions` | Get suggested questions |
@@ -153,11 +154,11 @@ POST /api/chat
 {
   "query": "Who is the Ruined King?",
   "top_k": 4,
-  "temperature": 0.7,
-  "provider": "groq",
-  "model": "llama-3.3-70b-versatile"
+  "temperature": 0.7
 }
 ```
+
+---
 
 ## Configuration
 
@@ -165,13 +166,11 @@ POST /api/chat
 
 ```bash
 # LLM Provider Selection
-LLM_PROVIDER=groq   # groq | gemini | openrouter | auto
+LLM_PROVIDER=openrouter   # groq | gemini | openrouter | auto
 
 # Groq API
 GROQ_API_KEY=your_groq_api_key_here
 LLM_MODEL_NAME=llama-3.3-70b-versatile
-LLM_TEMPERATURE=0.7
-LLM_MAX_TOKENS=1024
 
 # Google Gemini
 GEMINI_API_KEY=your_google_ai_api_key_here
@@ -181,8 +180,9 @@ GEMINI_MODEL_NAME=gemini-1.5-flash
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 OPENROUTER_MODEL_NAME=openai/gpt-4o-mini
 
-# Embedding Model
-EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+# LLM settings
+LLM_TEMPERATURE=0.7
+LLM_MAX_TOKENS=1024
 
 # Vector Store
 CHROMA_PERSIST_DIRECTORY=./chroma_data
@@ -192,27 +192,28 @@ COLLECTION_NAME=rag_documents
 RETRIEVER_TOP_K=3
 CHUNK_SIZE=1000
 CHUNK_OVERLAP=200
-
-# Logging
-LOG_LEVEL=INFO
 ```
 
 ### Tuning Parameters
 
-- **CHUNK_SIZE**: Larger chunks = more context, smaller chunks = more precise
-- **CHUNK_OVERLAP**: Helps maintain continuity between chunks
-- **RETRIEVER_TOP_K**: Number of documents to retrieve (3-5 recommended)
-- **LLM_TEMPERATURE**: Lower (0.3) = more precise, Higher (0.9) = more creative
+- **CHUNK_SIZE**: Larger chunks = more context per result; smaller = more precise match
+- **CHUNK_OVERLAP**: Helps maintain continuity across chunk boundaries
+- **RETRIEVER_TOP_K**: Number of chunks to retrieve (3–5 recommended)
+- **LLM_TEMPERATURE**: Lower (0.3) = more precise; higher (0.9) = more creative
 - **LLM_MAX_TOKENS**: Maximum response length
+
+---
 
 ## RAG Pipeline
 
 ```
 User Question
     ↓
-Retriever (Semantic Search)
+Query Embedding (fastembed ONNX)
     ↓
-Retrieve Top-K Relevant Documents
+HNSW Similarity Search (ChromaDB)
+    ↓
+Retrieve Top-K Chunks
     ↓
 Format Context
     ↓
@@ -222,82 +223,27 @@ LLM (Groq / Gemini / OpenRouter)
     ↓
 Generate Grounded Response
     ↓
-Validate Response
-    ↓
 Return Answer + Sources
 ```
 
-## System Components
-
-### 1. Document Ingestion (`ingestion/`)
-
-**document_loader.py** — Loads PDF and TXT files with metadata
-
-**text_splitter.py** — Recursive character splitting with configurable size/overlap
-
-**embeddings.py** — Sentence Transformers embedding generation with caching
-
-### 2. Vector Store (`vector_store/`)
-
-**chroma_db.py** — Local persistent ChromaDB storage, similarity search, sync-with-disk
-
-### 3. Retrieval (`retrieval/`)
-
-**retriever.py** — Semantic similarity search, Top-K document ranking, context formatting
-
-### 4. Generation (`generation/`)
-
-**llm_factory.py** — Selects and instantiates the correct LLM provider
-
-**llm.py** — Groq API integration
-
-**gemini_llm.py** — Google Gemini integration
-
-**openrouter_llm.py** — OpenRouter integration (200+ models via OpenAI-compatible API)
-
-**prompt_template.py** — Prompt engineering, response validation, hallucination detection
-
-**rag_chain.py** — Complete pipeline orchestration, error handling, statistics
-
-### 5. Backend (`server.py`)
-
-FastAPI application exposing the RAG pipeline as a REST API with static file serving.
+---
 
 ## Troubleshooting
 
 ### "No API key configured"
 1. Check `.env` file exists in project root
 2. Ensure at least one API key is set and valid
-3. Verify `LLM_PROVIDER` matches the key you've set
+3. Verify `LLM_PROVIDER` matches the key you set
 
-### "No documents loaded"
-1. Add PDF or TXT files to `data/pdfs/` or `data/txt/`
-2. Ensure files are not corrupted
-3. Call `POST /api/reindex` to trigger re-indexing
+### "No documents loaded" (local)
+1. Add PDF files to `data/pdfs/`
+2. Run `python preindex.py` to rebuild the index
+3. Restart the server
 
-### Slow response time
-1. Reduce `RETRIEVER_TOP_K`
-2. Reduce `LLM_MAX_TOKENS`
-3. Check internet connection (LLM API calls)
+### Slow cold start on Render
+Render's free tier sleeps after 15 minutes of inactivity. The first request after sleep takes ~30 seconds to wake — this is normal. The index itself loads instantly once the container is running.
 
-### Irrelevant results
-1. Adjust `CHUNK_SIZE` (try 800-1200)
-2. Modify `CHUNK_OVERLAP` (try 100-300)
-3. Increase `RETRIEVER_TOP_K`
-
-## Performance Tips
-
-1. **Optimal Chunk Size**: 800-1200 characters
-2. **Retrieval Count**: 3-5 documents usually sufficient
-3. **Temperature**: 0.7 for balanced responses
-4. **Max Tokens**: 1024 for detailed answers
-
-## Limitations
-
-- Answers limited to document content (no external knowledge)
-- Response quality depends on document quality
-- Vector search is semantic, not keyword-based
-- Subject to LLM provider API rate limits
+---
 
 ## License
 
@@ -305,4 +251,4 @@ This project is provided for educational purposes.
 
 ---
 
-**League of Legends Lore Assistant** | Built with LangChain, ChromaDB, and FastAPI
+**LoL Lore RAG Assistant** | Built with LangChain, ChromaDB, fastembed, and FastAPI | Deployed on Render

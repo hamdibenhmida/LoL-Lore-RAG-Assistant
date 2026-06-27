@@ -1,15 +1,12 @@
-# RAG Chatbot - Project Index & Navigation
+# LoL Lore RAG Assistant — Project Index
 
 ## Getting Started
 
-### First Time Here?
-**START HERE**: Read [QUICKSTART.md](QUICKSTART.md) for a 5-minute setup guide
+**Try it live**: https://lol-lore-rag-assistant.onrender.com/
 
-### Already Familiar?
-**RUN THIS**: `uvicorn server:app --reload --port 8000` (after setting an API key in .env)
+**Run locally**: See [QUICKSTART.md](QUICKSTART.md)
 
-### Want All Details?
-**READ THIS**: [README.md](README.md) for complete documentation
+**Full documentation**: [README.md](README.md)
 
 ---
 
@@ -17,8 +14,8 @@
 
 | File | Purpose | Read Time |
 |------|---------|-----------|
-| [QUICKSTART.md](QUICKSTART.md) | Quick setup guide | 5 min |
-| [README.md](README.md) | Complete user documentation | 15 min |
+| [QUICKSTART.md](QUICKSTART.md) | Local setup + adding PDFs | 5 min |
+| [README.md](README.md) | Complete user documentation | 10 min |
 | [ACADEMIC_REPORT.md](ACADEMIC_REPORT.md) | Technical deep dive | 20 min |
 | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | Project completion report | 10 min |
 
@@ -27,16 +24,20 @@
 ## Quick Setup
 
 ```bash
-# Step 1: Configure
-# Edit .env and set your LLM API key
+# 1. Configure
+cp .env.example .env
+# Add your LLM API key to .env
 
-# Step 2: Install
+# 2. Install
 pip install -r requirements.txt
 
-# Step 3: Run
+# 3. Build vector index
+python preindex.py
+
+# 4. Run
 uvicorn server:app --reload --port 8000
 
-# Step 4: Open
+# 5. Open
 # http://localhost:8000
 ```
 
@@ -46,70 +47,62 @@ uvicorn server:app --reload --port 8000
 
 ### Core Application Files
 - **server.py** — FastAPI application (main entry point)
-- **app.py** — Convenience launcher (runs uvicorn)
+- **preindex.py** — Builds the ChromaDB HNSW index from PDFs (run at `docker build` time)
+- **Dockerfile** — Docker build: installs deps, builds index, copies app
 - **requirements.txt** — Python dependencies
-- **.env** — Local configuration (add your API key here)
 - **.env.example** — Configuration template
-- **start_server.bat** — Windows start script
 
 ### Python Modules
 
 #### Ingestion (`ingestion/`)
-- **document_loader.py** — Load PDF and TXT files
-- **text_splitter.py** — Chunk documents with configurable parameters
-- **embeddings.py** — Generate embeddings using SentenceTransformers
+- **document_loader.py** — Load PDF files with metadata
+- **text_splitter.py** — Chunk documents with configurable size/overlap
+- **embeddings.py** — fastembed ONNX embedding generation (BAAI/bge-small-en-v1.5)
 
 #### Vector Store (`vector_store/`)
-- **chroma_db.py** — ChromaDB persistent storage, sync-with-disk
+- **chroma_db.py** — ChromaDB persistent HNSW storage and similarity search
 
 #### Retrieval (`retrieval/`)
-- **retriever.py** — Semantic similarity search and ranking
+- **retriever.py** — Top-K semantic search and context formatting
 
 #### Generation (`generation/`)
-- **llm_factory.py** — Provider selection and LLM instantiation
+- **llm_factory.py** — Provider selection (Groq / Gemini / OpenRouter / auto)
 - **llm.py** — Groq API integration
 - **gemini_llm.py** — Google Gemini integration
 - **openrouter_llm.py** — OpenRouter integration (200+ models)
-- **prompt_template.py** — Prompt engineering and response validation
+- **prompt_template.py** — Prompt engineering and grounding instructions
 - **rag_chain.py** — Complete RAG pipeline orchestration
 
 #### Utilities (`utils/`)
 - **config.py** — Centralized configuration management
 
-### Data Directories
-- **data/pdfs/** — Place your PDF documents here
-- **data/txt/** — Place your TXT files here
-- **chroma_data/** — Generated vector store (created at first run)
-- **frontend/** — Static web frontend files
+### Data & Build Artifacts
+- **data/pdfs/** — Source PDF documents (committed to git)
+- **chroma_data/** — Vector index (built inside Docker, not committed to git)
+- **frontend/** — Static web frontend
 
 ---
 
 ## Key Features
 
 **Document Processing**
-- Support for PDF and TXT files
-- Intelligent chunking with overlap
-- Metadata extraction
+- PDF loading with metadata extraction
+- Recursive character-based chunking
+- Configurable chunk size and overlap
 
 **Vector Storage**
-- ChromaDB with persistent local storage
-- Fast semantic search
-- Sync-with-disk to remove stale chunks
+- ChromaDB 1.5.9 with Rust HNSW index
+- Index built on Linux at `docker build` time (no cross-platform issues)
+- Fast similarity search at query time
 
 **LLM Integration**
 - Groq, Google Gemini, and OpenRouter support
 - Auto provider selection
-- Configurable temperature and tokens
+- Configurable temperature and max tokens
 
 **REST API**
-- FastAPI backend at http://localhost:8000
-- `/api/chat`, `/api/reindex`, `/api/sync`, `/api/stats`, `/api/providers`
-
-**Production Features**
-- Comprehensive error handling
-- Detailed logging
-- Type hints throughout
-- Configuration management
+- FastAPI backend at `http://localhost:8000`
+- `/api/chat`, `/api/reindex`, `/api/sync`, `/api/stats`, `/api/providers`, `/api/health`
 
 ---
 
@@ -118,23 +111,19 @@ uvicorn server:app --reload --port 8000
 ```
 User Question
     ↓
-Input Validation
+Query Embedding (fastembed ONNX)
     ↓
-Query Embedding (SentenceTransformers)
+HNSW Similarity Search (ChromaDB)
     ↓
-Vector Search (ChromaDB)
-    ↓
-Retrieve Top-K Documents
+Retrieve Top-K Chunks
     ↓
 Format Context
     ↓
-Build Prompt (with instructions)
+Build Prompt (Context + Question + Instructions)
     ↓
 Call LLM (Groq / Gemini / OpenRouter)
     ↓
-Generate Response
-    ↓
-Validate Grounding
+Generate Grounded Response
     ↓
 Return Answer + Sources
 ```
@@ -143,93 +132,39 @@ Return Answer + Sources
 
 ## Configuration & Tuning
 
-### Key Parameters
-
 **Chunking**
-- `CHUNK_SIZE` (default: 1000) — Characters per chunk
-- `CHUNK_OVERLAP` (default: 200) — Character overlap
+- `CHUNK_SIZE` (default: 1000) — characters per chunk
+- `CHUNK_OVERLAP` (default: 200) — character overlap between chunks
 
 **Retrieval**
-- `RETRIEVER_TOP_K` (default: 3) — Documents to retrieve
+- `RETRIEVER_TOP_K` (default: 3) — chunks to retrieve per query
 
 **LLM**
 - `LLM_PROVIDER` — groq | gemini | openrouter | auto
-- `LLM_TEMPERATURE` (default: 0.7) — Response creativity
-- `LLM_MAX_TOKENS` (default: 1024) — Response length
+- `LLM_TEMPERATURE` (default: 0.7)
+- `LLM_MAX_TOKENS` (default: 1024)
 
 Edit `.env` to change these values.
-
----
-
-## Troubleshooting
-
-### Installation Issues
-Run: `python setup_validation.py`
-
-### No Documents Found
-1. Add files to `data/pdfs/` or `data/txt/`
-2. Call `POST /api/reindex` or restart the server
-
-### Slow Responses
-1. Check internet connection
-2. Reduce `RETRIEVER_TOP_K`
-3. Reduce `LLM_MAX_TOKENS`
-
-### API Errors
-1. Verify your API key in .env
-2. Check `LLM_PROVIDER` matches the key you set
-3. Verify internet connection
-
-See [QUICKSTART.md](QUICKSTART.md) for more troubleshooting.
-
----
-
-## Project Checklist
-
-### Setup
-- [ ] Create virtual environment
-- [ ] Install requirements.txt
-- [ ] Set at least one API key in .env
-- [ ] Add sample documents to data/
-
-### Validation
-- [ ] Run `python setup_validation.py`
-- [ ] All checks pass
-
-### First Run
-- [ ] Start with `uvicorn server:app --reload --port 8000`
-- [ ] Server accessible at http://localhost:8000
-- [ ] Can submit a question via the web UI or API
-- [ ] Get a grounded response
 
 ---
 
 ## Common Questions
 
 **Q: Where do I add documents?**
-A: Place PDF files in `data/pdfs/` and TXT files in `data/txt/`
+A: Place PDF files in `data/pdfs/`, then run `python preindex.py` locally or push to git to trigger a Render rebuild.
 
 **Q: Where do I set the API key?**
-A: Edit `.env` and set `GROQ_API_KEY`, `GEMINI_API_KEY`, or `OPENROUTER_API_KEY`
+A: Edit `.env` and set `GROQ_API_KEY`, `GEMINI_API_KEY`, or `OPENROUTER_API_KEY`.
 
-**Q: How do I switch LLM providers?**
-A: Set `LLM_PROVIDER=groq|gemini|openrouter|auto` in `.env`
+**Q: How does the index get built?**
+A: `preindex.py` runs during `docker build` on Render's Linux servers, producing a Linux-native HNSW index baked into the Docker image. The app never re-processes PDFs at runtime.
 
-**Q: How do I add new documents without restarting?**
-A: Call `POST /api/reindex` while the server is running
+**Q: Why is the first request slow?**
+A: Render's free tier sleeps after 15 min of inactivity. The first request wakes the container (~30 s). Once running, responses are fast.
 
-**Q: How do I remove documents that were deleted from disk?**
-A: Call `POST /api/sync` — it cleans up stale chunks automatically
-
----
-
-## Support
-
-- **Quick Issues**: Check [QUICKSTART.md](QUICKSTART.md) troubleshooting
-- **Usage Questions**: See [README.md](README.md)
-- **Technical Details**: Read [ACADEMIC_REPORT.md](ACADEMIC_REPORT.md)
-- **Validation**: Run `python setup_validation.py`
+**Q: How do I re-index after adding documents (locally)?**
+A: Run `python preindex.py` then restart the server. Or call `POST /api/reindex` while the server is running.
 
 ---
 
-**LoL Lore RAG Assistant v1.0** | Built with LangChain, ChromaDB, FastAPI, and multi-provider LLM support
+**LoL Lore RAG Assistant** | LangChain · ChromaDB · fastembed · FastAPI · Docker · Render
