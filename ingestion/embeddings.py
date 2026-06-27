@@ -1,44 +1,45 @@
 """
 Embeddings generation module.
 
-Uses Google Gemini Embedding API — no local model or ONNX runtime required.
+Uses FastEmbed (ONNX-based) for local embedding with no torch dependency.
 """
 
 import logging
 from typing import List
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from fastembed import TextEmbedding
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_MODEL = "BAAI/bge-small-en-v1.5"
+
 
 class EmbeddingsGenerator:
-    """Generate embeddings using the Google Gemini Embeddings API."""
+    """Generate embeddings using FastEmbed."""
 
-    _embeddings = None
+    _model = None
 
     def __init__(self, model_name: str = None):
-        if EmbeddingsGenerator._embeddings is None:
-            logger.info("Initialising Google Gemini embeddings")
-            EmbeddingsGenerator._embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/text-embedding-004",
-                google_api_key=Config.GEMINI_API_KEY,
-            )
-            logger.info("Gemini embeddings ready")
+        self.model_name = model_name or _DEFAULT_MODEL
+
+        if EmbeddingsGenerator._model is None:
+            logger.info(f"Loading embedding model: {self.model_name}")
+            EmbeddingsGenerator._model = TextEmbedding(model_name=self.model_name)
+            logger.info("Embedding model loaded successfully")
 
     @property
-    def model(self) -> GoogleGenerativeAIEmbeddings:
-        return EmbeddingsGenerator._embeddings
+    def model(self) -> TextEmbedding:
+        return EmbeddingsGenerator._model
 
     def embed_query(self, query: str) -> List[float]:
         if not query:
             return []
-        return self.model.embed_query(query)
+        return list(self.model.embed([query]))[0].tolist()
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         if not texts:
             return []
-        return self.model.embed_documents(texts)
+        return [emb.tolist() for emb in self.model.embed(texts)]
 
     def get_embedding_dimension(self) -> int:
         return len(self.embed_query("test"))

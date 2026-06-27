@@ -44,7 +44,7 @@ class Config:
     # ===== Embedding Configuration =====
     EMBEDDING_MODEL_NAME: str = os.getenv(
         "EMBEDDING_MODEL_NAME",
-        "models/text-embedding-004"
+        "BAAI/bge-small-en-v1.5"
     )
 
     # ===== Vector Store Configuration =====

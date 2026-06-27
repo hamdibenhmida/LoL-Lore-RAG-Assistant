@@ -1,23 +1,24 @@
 # Web framework
-fastapi==0.110.0
-uvicorn[standard]==0.27.1
+fastapi==0.137.0
+uvicorn[standard]==0.49.0
 
 # Core LangChain Dependencies
-langchain==0.1.13
-langchain-groq==0.1.1
-langchain-chroma==0.1.1
-langchain-core>=0.1.41,<0.2.0
-langchain-community>=0.0.33,<0.1.0
-langchain-google-genai==1.0.1
+langchain==1.3.9
+langchain-groq==1.1.3
+langchain-chroma==1.1.0
+langchain-core==1.4.7
+langchain-community==0.4.2
+langchain-google-genai==4.2.5
 
 # Vector Database
-chromadb==0.4.24
+chromadb==1.5.9
 
-# Embeddings via Google Gemini API (no local model/ONNX runtime needed)
+# Embeddings (ONNX-based via fastembed, no torch needed)
+fastembed==0.3.6
 
 # LLM Providers
-groq==0.4.2
-google-generativeai==0.4.1
+groq==0.37.1
+google-genai==2.8.0
 
 # Document Processing
 PyPDF2==3.0.1
@@ -26,5 +27,5 @@ pypdf==4.0.1
 # Configuration & Utilities
 python-dotenv==1.0.0
 requests==2.31.0
-pydantic==2.5.2
-numpy==1.24.3
+pydantic==2.13.4
+numpy==2.4.6

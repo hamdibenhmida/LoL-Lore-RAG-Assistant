@@ -8,8 +8,7 @@ __pycache__/
 .venv/
 venv/
 
-# Generated / data
-chroma_data/
+# Generated / data (chroma_data IS committed — it's the pre-built index)
 
 # IDE
 .idea/claudeCodeEditorTabs.xml
