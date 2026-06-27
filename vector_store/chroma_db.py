@@ -16,6 +16,24 @@ from utils.config import Config
 logger = logging.getLogger(__name__)
 
 
+class _EmbeddingsWrapper(Embeddings):
+    """LangChain Embeddings wrapper around EmbeddingsGenerator.
+
+    Reuses the singleton fastembed model already loaded at startup,
+    avoiding tqdm thread-safety issues on Linux from FastEmbedEmbeddings.
+    """
+
+    def __init__(self):
+        from ingestion.embeddings import get_embeddings_generator
+        self._gen = get_embeddings_generator()
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return self._gen.embed_texts(texts)
+
+    def embed_query(self, text: str) -> List[float]:
+        return self._gen.embed_query(text)
+
+
 class ChromaVectorStore:
     """Manage ChromaDB for persistent vector storage."""
 
@@ -42,10 +60,9 @@ class ChromaVectorStore:
         # Create directory if it doesn't exist
         Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
 
-        # Use provided embeddings or fastembed (ONNX, no torch)
+        # Use provided embeddings or our fastembed wrapper (no langchain-community)
         if embeddings is None:
-            from langchain_community.embeddings import FastEmbedEmbeddings
-            embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+            embeddings = _EmbeddingsWrapper()
 
         self.embeddings = embeddings
         self.vector_store = None
