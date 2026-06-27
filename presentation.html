@@ -25,27 +25,27 @@
     --muted2:    #9ca3af;
 
     /* ── Font scale ──────────────────────────────────── */
-    --fs-xs:         .62rem;   /* tiny method badges        */
-    --fs-label:      .8rem;   /* section tags, th, badges  */
-    --fs-caption:    1.3rem;    /* inline labels, code       */
-    --fs-meta:       .8rem;   /* metric labels, small arch */
-    --fs-sm:         .85rem;   /* counter, code blocks      */
-    --fs-pipe:       1rem;   /* pipeline steps            */
-    --fs-body-sm:    1.1rem;   /* meta items, small inline  */
-    --fs-body:       1.2rem;    /* card body, table, general */
-    --fs-card:       .9rem;   /* card-body text            */
-    --fs-list:       1rem;   /* check-list, arch arrow    */
-    --fs-base:       1rem;     /* base / arrows / desc      */
-    --fs-sub:        1.05rem;  /* slide subtitle            */
-    --fs-icon-sm:    1.2rem;   /* small icons               */
-    --fs-step:       1.4rem;   /* pipeline step numbers     */
-    --fs-icon:       1.5rem;   /* card icons                */
-    --fs-logo:       1.6rem;   /* logo, conclusion marks    */
-    --fs-metric:     3rem;   /* metric values             */
-    --fs-icon-lg:    1.8rem;   /* large provider icons      */
-    --fs-heading:    2.5rem;   /* slide titles              */
-    --fs-heading-lg: 2.4rem;   /* large title override      */
-    --fs-title:      4rem;     /* hero title                */
+    --fs-xs:         .62rem;
+    --fs-label:      .8rem;
+    --fs-caption:    1.3rem;
+    --fs-meta:       .8rem;
+    --fs-sm:         .85rem;
+    --fs-pipe:       1rem;
+    --fs-body-sm:    1.1rem;
+    --fs-body:       1.2rem;
+    --fs-card:       .9rem;
+    --fs-list:       1rem;
+    --fs-base:       1rem;
+    --fs-sub:        1.05rem;
+    --fs-icon-sm:    1.2rem;
+    --fs-step:       1.4rem;
+    --fs-icon:       1.5rem;
+    --fs-logo:       1.6rem;
+    --fs-metric:     3rem;
+    --fs-icon-lg:    1.8rem;
+    --fs-heading:    2.5rem;
+    --fs-heading-lg: 2.4rem;
+    --fs-title:      4rem;
   }
 
   body {
@@ -331,8 +331,7 @@
   .arch-row { display: flex; gap: 1rem; align-items: center; justify-content: center; }
 
   /* ── Gradient bg slides ────────────────────────────────────────── */
-  #slide-1  { }
-  #slide-17 {
+  #slide-18 {
     justify-content: center;
     background:
       radial-gradient(ellipse 70% 60% at 50% 40%, rgba(139,92,246,.15) 0%, transparent 70%),
@@ -378,13 +377,14 @@
     <div class="title-desc">
       A production-quality Retrieval-Augmented Generation system that answers questions about
       the League of Legends universe — champions, factions, regions, and events in Runeterra —
-      grounded exclusively in lore documents.
+      grounded exclusively in lore documents. Deployed live on Render.
     </div>
     <div class="title-meta">
       <div class="title-meta-item">🗺️ <span>Runeterra Universe</span></div>
       <div class="title-meta-item">🏗️ <span>LangChain · ChromaDB · FastAPI</span></div>
       <div class="title-meta-item">🤖 <span>Groq · Gemini · OpenRouter</span></div>
-      <div class="title-meta-item">🐍 <span>Python 3.8+</span></div>
+      <div class="title-meta-item">🐍 <span>Python 3.11</span></div>
+      <div class="title-meta-item">🐳 <span>Docker · Render</span></div>
     </div>
   </div>
 
@@ -444,13 +444,13 @@
           <li>Ground all LLM responses in provided documents</li>
           <li>Prevent hallucination with explicit safeguards</li>
           <li>Expose a clean REST API via FastAPI</li>
-          <li>Production-quality code: modular, documented, tested</li>
+          <li>Production-quality code: modular, documented, deployed</li>
         </ul>
       </div>
       <div>
         <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);margin-bottom:.8rem">Secondary Objectives</div>
         <ul class="check-list">
-          <li class="bullet">Persistent vector storage (no re-embedding on restart)</li>
+          <li class="bullet">Index pre-built at deploy time — instant cold starts</li>
           <li class="bullet">Multi-provider LLM support (Groq, Gemini, OpenRouter)</li>
           <li class="bullet">Auto provider selection based on available API keys</li>
           <li class="bullet">Configurable parameters via .env</li>
@@ -467,7 +467,7 @@
     <div class="slide-title">System <span>Architecture</span></div>
     <div class="two-col" style="align-items:center;gap:3rem">
       <div class="arch-diagram">
-        <div class="arch-box frontend" style="width:260px">🌐 Web Frontend (HTML/JS)<br><small style="font-weight:400;opacity:.8">http://localhost:8000</small></div>
+        <div class="arch-box frontend" style="width:260px">🌐 Web Frontend (HTML/JS)<br><small style="font-weight:400;opacity:.8">lol-lore-rag-assistant.onrender.com</small></div>
         <div class="arch-arrow">↕ HTTP</div>
         <div class="arch-box api" style="width:260px">⚡ FastAPI — server.py<br><small style="font-weight:400;opacity:.8">/api/chat · /api/reindex · /api/sync</small></div>
         <div class="arch-arrow">↓</div>
@@ -478,9 +478,7 @@
           <div class="arch-box gen" style="min-width:110px;font-size:var(--fs-meta)">🤖 Generation</div>
         </div>
         <div class="arch-arrow">↓</div>
-        <div class="arch-box vector" style="width:260px">💾 ChromaDB Vector Store</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box ingest" style="width:260px">📄 Document Ingestion</div>
+        <div class="arch-box vector" style="width:260px">💾 ChromaDB HNSW Index<br><small style="font-weight:400;opacity:.8">baked into Docker image</small></div>
         <div class="arch-arrow">↓</div>
         <div class="arch-box ext" style="width:260px">🔑 LLM APIs (Groq / Gemini / OpenRouter)</div>
       </div>
@@ -489,11 +487,11 @@
         <div style="display:flex;flex-direction:column;gap:.6rem">
           <div class="card" style="padding:.7rem 1rem">
             <div class="card-title">ingestion/</div>
-            <div class="card-body">document_loader · text_splitter · embeddings</div>
+            <div class="card-body">document_loader · text_splitter · embeddings (fastembed ONNX)</div>
           </div>
           <div class="card" style="padding:.7rem 1rem">
             <div class="card-title">vector_store/</div>
-            <div class="card-body">chroma_db — persistent storage + sync</div>
+            <div class="card-body">chroma_db — HNSW index, built at docker build time</div>
           </div>
           <div class="card" style="padding:.7rem 1rem">
             <div class="card-title">retrieval/</div>
@@ -526,8 +524,8 @@
         <div style="font-size:var(--fs-step);margin-bottom:.4rem">2️⃣</div>
         <div class="card-title" style="color:var(--cyan)">Document Retrieval</div>
         <ul class="check-list">
-          <li class="bullet">Embed query (384-dim)</li>
-          <li class="bullet">Cosine similarity search</li>
+          <li class="bullet">Embed query (384-dim ONNX)</li>
+          <li class="bullet">HNSW similarity search</li>
           <li class="bullet">Top-K ranking</li>
         </ul>
       </div>
@@ -581,13 +579,12 @@
           <div class="card-title">document_loader.py</div>
           <ul class="check-list" style="margin-top:.5rem">
             <li class="bullet">PyPDFLoader for PDF files</li>
-            <li class="bullet">TextLoader for .txt files</li>
             <li class="bullet">Metadata extraction</li>
-            <li class="bullet">Bulk loading from data/</li>
+            <li class="bullet">Bulk loading from data/pdfs/</li>
+            <li class="bullet">Runs inside Docker build</li>
           </ul>
           <div class="tags" style="margin-top:.8rem">
             <span class="tag purple">PDF</span>
-            <span class="tag purple">TXT</span>
           </div>
         </div>
       </div>
@@ -611,20 +608,20 @@
           <div class="card-icon">🔢</div>
           <div class="card-title">embeddings.py</div>
           <ul class="check-list" style="margin-top:.5rem">
-            <li class="bullet">all-MiniLM-L6-v2 model</li>
+            <li class="bullet">BAAI/bge-small-en-v1.5</li>
             <li class="bullet">Embedding dimension: 384</li>
-            <li class="bullet">Singleton pattern</li>
-            <li class="bullet">~5,000 embeddings/sec</li>
+            <li class="bullet">Singleton pattern (thread-safe)</li>
+            <li class="bullet">ONNX Runtime — no GPU needed</li>
           </ul>
           <div class="tags" style="margin-top:.8rem">
-            <span class="tag green">SentenceTransformers</span>
+            <span class="tag green">fastembed ONNX</span>
           </div>
         </div>
       </div>
     </div>
     <div class="divider"></div>
     <div style="font-size:var(--fs-sm);color:var(--muted2)">
-      Documents are auto-indexed on first startup. Call <code style="color:var(--purple3);background:rgba(139,92,246,.1);padding:.1rem .4rem;border-radius:4px">POST /api/reindex</code> to pick up new files without restarting.
+      Documents are indexed once at <code style="color:var(--purple3);background:rgba(139,92,246,.1);padding:.1rem .4rem;border-radius:4px">docker build</code> time via <code style="color:var(--purple3);background:rgba(139,92,246,.1);padding:.1rem .4rem;border-radius:4px">preindex.py</code>. At runtime the app loads the pre-built index instantly — no re-embedding on startup.
     </div>
   </div>
 
@@ -638,9 +635,9 @@
           <div class="card-icon">💾</div>
           <div class="card-title">ChromaDB — chroma_db.py</div>
           <ul class="check-list" style="margin-top:.5rem">
-            <li>Local file-based persistence (chroma_data/)</li>
-            <li>No re-computation on restart</li>
-            <li>Collection management</li>
+            <li>Rust-based HNSW index (chromadb 1.5.9)</li>
+            <li>Linux-native index baked into Docker image</li>
+            <li>Loads in &lt;2 s at container startup</li>
             <li>Sync-with-disk: removes stale chunks</li>
             <li>Delete by source file</li>
           </ul>
@@ -671,8 +668,8 @@ where:
         <div style="margin-top:1rem">
           <div class="card-grid cols-2">
             <div class="metric-card">
-              <div class="metric-value cyan">&lt;500ms</div>
-              <div class="metric-label">Search (10k docs)</div>
+              <div class="metric-value cyan">&lt;10ms</div>
+              <div class="metric-label">HNSW Search</div>
             </div>
             <div class="metric-card">
               <div class="metric-value green">~85%</div>
@@ -798,14 +795,14 @@ POST /api/chat
   <span class="str">"query"</span>:       <span class="str">"Who is the Ruined King?"</span>,
   <span class="str">"top_k"</span>:       <span class="num">4</span>,
   <span class="str">"temperature"</span>: <span class="num">0.7</span>,
-  <span class="str">"provider"</span>:    <span class="str">"groq"</span>,
-  <span class="str">"model"</span>:       <span class="str">"llama-3.3-70b-versatile"</span>
+  <span class="str">"provider"</span>:    <span class="str">"openrouter"</span>,
+  <span class="str">"model"</span>:       <span class="str">"openai/gpt-4o-mini"</span>
 }
         </div>
         <div class="divider"></div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
           <span class="tag cyan">CORS enabled</span>
-          <span class="tag green">Lazy RAG init</span>
+          <span class="tag green">Background RAG init</span>
           <span class="tag purple">Pydantic schemas</span>
           <span class="tag amber">503 on config error</span>
         </div>
@@ -824,13 +821,12 @@ POST /api/chat
           <tr><td>LLM (Groq)</td><td>llama-3.3-70b-versatile</td><td>Latest</td></tr>
           <tr><td>LLM (Gemini)</td><td>gemini-1.5-flash</td><td>Latest</td></tr>
           <tr><td>LLM (OpenRouter)</td><td>openai/gpt-4o-mini</td><td>Latest</td></tr>
-          <tr><td>Embeddings</td><td>SentenceTransformers</td><td>2.2.2</td></tr>
-          <tr><td>Vector DB</td><td>ChromaDB</td><td>0.4.24</td></tr>
-          <tr><td>Framework</td><td>LangChain</td><td>0.1.13</td></tr>
+          <tr><td>Embeddings</td><td>fastembed — BAAI/bge-small-en-v1.5</td><td>0.3.6</td></tr>
+          <tr><td>Vector DB</td><td>ChromaDB (Rust HNSW)</td><td>1.5.9</td></tr>
+          <tr><td>Framework</td><td>LangChain</td><td>1.3.9</td></tr>
           <tr><td>Backend</td><td>FastAPI + uvicorn</td><td>Latest</td></tr>
-          <tr><td>PDF Processing</td><td>PyPDF2</td><td>3.0.1</td></tr>
-          <tr><td>ML/DL Backend</td><td>PyTorch</td><td>2.1.2</td></tr>
-          <tr><td>Configuration</td><td>python-dotenv</td><td>1.0.0</td></tr>
+          <tr><td>PDF Processing</td><td>pypdf</td><td>4.0.1</td></tr>
+          <tr><td>Deployment</td><td>Docker · Render (free tier)</td><td>Python 3.11</td></tr>
         </tbody>
       </table>
       <div>
@@ -838,38 +834,85 @@ POST /api/chat
         <div style="display:flex;flex-direction:column;gap:.7rem;font-size:var(--fs-body);color:var(--muted2)">
           <div><strong style="color:var(--text)">LangChain</strong> — Unified LLM + document processing interface</div>
           <div><strong style="color:var(--text)">ChromaDB</strong> — Lightweight, file-based, no server required</div>
-          <div><strong style="color:var(--text)">SentenceTransformers</strong> — Fast, accurate, runs locally</div>
+          <div><strong style="color:var(--text)">fastembed</strong> — ONNX-based, no PyTorch/GPU, ~22 MB model, fast CPU inference</div>
           <div><strong style="color:var(--text)">Multi-Provider LLM</strong> — Flexibility, no vendor lock-in</div>
           <div><strong style="color:var(--text)">FastAPI</strong> — High performance, auto-generated OpenAPI docs</div>
-          <div><strong style="color:var(--text)">Python</strong> — Industry standard for AI/ML</div>
+          <div><strong style="color:var(--text)">Docker + Render</strong> — Reproducible builds, free cloud deployment</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ══════════════ SLIDE 12 — DESIGN DECISIONS ══════════════ -->
+  <!-- ══════════════ SLIDE 12 — DEPLOYMENT ══════════════ -->
   <div class="slide" id="slide-12">
-    <div class="section-tag">07 — Implementation</div>
+    <div class="section-tag">07 — Deployment</div>
+    <div class="slide-title">Docker <span>Deployment</span> on Render</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Docker Build Pipeline</div>
+        <div class="code-block" style="font-size:var(--fs-caption)">
+<span class="cm"># Install dependencies</span>
+<span class="kw">RUN</span> pip install -r requirements.txt
+
+<span class="cm"># Copy PDFs + indexing code first</span>
+<span class="kw">COPY</span> data/ ingestion/ vector_store/ utils/
+<span class="kw">COPY</span> preindex.py .
+
+<span class="cm"># Build Linux-native HNSW index (~15 min)</span>
+<span class="cm"># Layer is cached — only re-runs when PDFs change</span>
+<span class="kw">RUN</span> python preindex.py
+
+<span class="cm"># Copy rest of app code</span>
+<span class="kw">COPY</span> . .
+
+<span class="kw">CMD</span> uvicorn server:app --host 0.0.0.0 --port ${PORT}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Why Build in Docker?</div>
+        <ul class="check-list">
+          <li>ChromaDB 1.5.9 Rust HNSW is platform-specific</li>
+          <li>Windows-built index cannot load on Linux (Render)</li>
+          <li>Building on Render's Linux → compatible index</li>
+          <li>Index baked into image → instant startup (&lt;2 s)</li>
+          <li>Layer caching: code changes don't re-trigger indexing</li>
+        </ul>
+        <div class="divider"></div>
+        <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.7rem">Adding New PDFs</div>
+        <div class="code-block" style="font-size:var(--fs-caption)">
+<span class="cm"># Drop PDF in data/pdfs/, then:</span>
+git add data/pdfs/new-lore.pdf
+git commit -m <span class="str">"Add PDF"</span>
+git push
+<span class="cm"># → Render rebuilds, new PDF indexed automatically</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 13 — DESIGN DECISIONS ══════════════ -->
+  <div class="slide" id="slide-13">
+    <div class="section-tag">08 — Implementation</div>
     <div class="slide-title">Key <span>Design Decisions</span></div>
     <div class="card-grid cols-2" style="flex:1">
       <div class="card" style="border-color:rgba(139,92,246,.3)">
         <div class="card-icon">💾</div>
-        <div class="card-title">Persistent Vector Store</div>
+        <div class="card-title">Index Built at Build Time</div>
         <ul class="check-list" style="margin-top:.4rem">
-          <li>Avoid expensive re-embedding on every restart</li>
-          <li>Faster startup — load existing ChromaDB collection</li>
-          <li>Data stays local — enhanced privacy</li>
-          <li>Sync-with-disk removes stale chunks automatically</li>
+          <li>Zero embedding delay at container startup</li>
+          <li>Linux-native index = no cross-platform issues</li>
+          <li>Docker layer cache = only re-indexes when PDFs change</li>
+          <li>Works within Render's 512 MB RAM limit</li>
         </ul>
       </div>
       <div class="card" style="border-color:rgba(34,211,238,.3)">
         <div class="card-icon">🧩</div>
-        <div class="card-title">Modular Architecture</div>
+        <div class="card-title">fastembed over PyTorch</div>
         <ul class="check-list" style="margin-top:.4rem">
-          <li>Ingestion / Retrieval / Generation are independent</li>
-          <li>Swap any component without touching others</li>
-          <li>Easy unit testing per module</li>
-          <li>Clear responsibility boundaries</li>
+          <li>ONNX Runtime — no GPU, no CUDA needed</li>
+          <li>~22 MB model vs ~600 MB PyTorch stack</li>
+          <li>Same embedding quality (384-dim, BAAI/bge)</li>
+          <li>Thread-safe singleton avoids tqdm Linux bug</li>
         </ul>
       </div>
       <div class="card" style="border-color:rgba(251,191,36,.3)">
@@ -889,24 +932,24 @@ POST /api/chat
           <li>Prompt explicitly forbids external knowledge</li>
           <li>ResponseEvaluator detects insufficient-info answers</li>
           <li>Source attribution in every response</li>
-          <li>Confidence metrics tracked per query</li>
+          <li>Background startup — no cold-start timeout</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- ══════════════ SLIDE 13 — PERFORMANCE ══════════════ -->
-  <div class="slide" id="slide-13">
-    <div class="section-tag">08 — Results</div>
+  <!-- ══════════════ SLIDE 14 — PERFORMANCE ══════════════ -->
+  <div class="slide" id="slide-14">
+    <div class="section-tag">09 — Results</div>
     <div class="slide-title">Performance <span>Results</span></div>
     <div class="card-grid cols-4" style="margin-bottom:1.5rem">
       <div class="metric-card">
-        <div class="metric-value cyan">&lt;500ms</div>
-        <div class="metric-label">Semantic Search (10k docs)</div>
+        <div class="metric-value cyan">&lt;2s</div>
+        <div class="metric-label">Index Load at Startup</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value green">~5,000</div>
-        <div class="metric-label">Embeddings / second</div>
+        <div class="metric-value green">~5ms</div>
+        <div class="metric-label">Query Embedding (ONNX)</div>
       </div>
       <div class="metric-card">
         <div class="metric-value purple">2–5s</div>
@@ -939,9 +982,9 @@ POST /api/chat
     </div>
   </div>
 
-  <!-- ══════════════ SLIDE 14 — LIMITATIONS ══════════════ -->
-  <div class="slide" id="slide-14">
-    <div class="section-tag">09 — Limitations</div>
+  <!-- ══════════════ SLIDE 15 — LIMITATIONS ══════════════ -->
+  <div class="slide" id="slide-15">
+    <div class="section-tag">10 — Limitations</div>
     <div class="slide-title">Known <span>Limitations</span></div>
     <div class="two-col">
       <div>
@@ -958,8 +1001,8 @@ POST /api/chat
         <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--amber);margin-bottom:.8rem">Practical & Scalability</div>
         <ul class="check-list">
           <li class="warn">Output quality depends on input document quality</li>
-          <li class="warn">First run requires initial embedding download (~500MB)</li>
-          <li class="warn">ChromaDB grows with the document corpus</li>
+          <li class="warn">Docker build takes ~15 min when PDFs change (cached otherwise)</li>
+          <li class="warn">Render free tier sleeps after 15 min — ~30 s wake-up delay</li>
           <li class="warn">Optimised for lore-scale corpora (&lt;1GB)</li>
           <li class="warn">Would need distributed search for massive datasets</li>
         </ul>
@@ -968,14 +1011,14 @@ POST /api/chat
     <div class="divider"></div>
     <div class="card" style="background:rgba(34,211,238,.05);border-color:rgba(34,211,238,.2)">
       <div class="card-body">
-        <strong style="color:var(--cyan)">Context:</strong> These limitations are inherent trade-offs of a locally-deployed RAG system designed for lore exploration — they are acceptable for the current scope and addressable in future iterations.
+        <strong style="color:var(--cyan)">Context:</strong> These limitations are inherent trade-offs of a free-tier deployed RAG system designed for lore exploration — they are acceptable for the current scope and addressable in future iterations.
       </div>
     </div>
   </div>
 
-  <!-- ══════════════ SLIDE 15 — FUTURE WORK ══════════════ -->
-  <div class="slide" id="slide-15">
-    <div class="section-tag">10 — Future Work</div>
+  <!-- ══════════════ SLIDE 16 — FUTURE WORK ══════════════ -->
+  <div class="slide" id="slide-16">
+    <div class="section-tag">11 — Future Work</div>
     <div class="slide-title">Future <span>Improvements</span></div>
     <div class="three-col" style="flex:1">
       <div>
@@ -993,7 +1036,7 @@ POST /api/chat
         <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);margin-bottom:.8rem">Performance</div>
         <ul class="check-list">
           <li class="bullet">Query result caching</li>
-          <li class="bullet">Embedding cache for speed</li>
+          <li class="bullet">Incremental index updates (no full rebuild)</li>
           <li class="bullet">Batch parallel document processing</li>
           <li class="bullet">Model quantization</li>
           <li class="bullet">Domain-specific fine-tuning</li>
@@ -1006,28 +1049,28 @@ POST /api/chat
           <li class="bullet">Query analytics dashboard</li>
           <li class="bullet">Response quality metrics</li>
           <li class="bullet">Database backend for scale</li>
-          <li class="bullet">Docker / cloud deployment</li>
+          <li class="bullet">Paid tier (persistent disk, no sleep)</li>
           <li class="bullet">Document management UI</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- ══════════════ SLIDE 16 — ACADEMIC VALUE ══════════════ -->
-  <div class="slide" id="slide-16">
-    <div class="section-tag">11 — Value & Use Cases</div>
+  <!-- ══════════════ SLIDE 17 — ACADEMIC VALUE ══════════════ -->
+  <div class="slide" id="slide-17">
+    <div class="section-tag">12 — Value & Use Cases</div>
     <div class="slide-title">What This <span>Enables</span></div>
     <div class="two-col">
       <div>
         <div style="font-size:var(--fs-caption);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--purple);margin-bottom:.8rem">Technical Achievements</div>
         <ul class="check-list">
-          <li>RAG system architecture end-to-end</li>
+          <li>End-to-end RAG system, deployed in production</li>
           <li>LLM integration patterns (multi-provider)</li>
           <li>Vector embeddings for semantic lore search</li>
           <li>Prompt engineering for grounded answers</li>
           <li>REST API design with FastAPI</li>
-          <li>Production software: logging, types, error handling</li>
-          <li>Modular design and clean separation of concerns</li>
+          <li>Docker build-time indexing with layer caching</li>
+          <li>Production-grade: logging, types, error handling</li>
         </ul>
       </div>
       <div>
@@ -1054,9 +1097,9 @@ POST /api/chat
     </div>
   </div>
 
-  <!-- ══════════════ SLIDE 17 — CONCLUSION ══════════════ -->
-  <div class="slide" id="slide-17">
-    <div class="section-tag">12 — Conclusion</div>
+  <!-- ══════════════ SLIDE 18 — CONCLUSION ══════════════ -->
+  <div class="slide" id="slide-18">
+    <div class="section-tag">13 — Conclusion</div>
     <div class="slide-title" style="font-size:var(--fs-heading-lg)">Project <span>Achieved</span></div>
     <div class="card-grid cols-3" style="margin-bottom:1.5rem">
       <div class="card" style="border-color:rgba(52,211,153,.3);text-align:center">
@@ -1086,12 +1129,12 @@ POST /api/chat
       </div>
       <div class="card" style="border-color:rgba(52,211,153,.3);text-align:center">
         <div style="font-size:var(--fs-logo);margin-bottom:.4rem">✅</div>
-        <div class="card-title" style="color:var(--green);text-align:center">Production Quality</div>
-        <div class="card-body" style="text-align:center">Modular · Typed · Logged · Documented</div>
+        <div class="card-title" style="color:var(--green);text-align:center">Live on Render</div>
+        <div class="card-body" style="text-align:center">Docker · Python 3.11 · fastembed ONNX</div>
       </div>
     </div>
     <div style="text-align:center;font-size:var(--fs-body);color:var(--muted);margin-top:.5rem">
-      League of Legends Lore RAG Assistant &nbsp;·&nbsp; LangChain · ChromaDB · FastAPI · Python 3.8+
+      lol-lore-rag-assistant.onrender.com &nbsp;·&nbsp; LangChain · ChromaDB · fastembed · FastAPI · Docker · Python 3.11
     </div>
   </div>
 
@@ -1100,7 +1143,7 @@ POST /api/chat
 <!-- ── Controls ───────────────────────────────────────── -->
 <div id="controls">
   <button class="ctrl-btn" id="btn-prev" title="Previous (←)">‹</button>
-  <span id="slide-counter">1 / 17</span>
+  <span id="slide-counter">1 / 18</span>
   <button class="ctrl-btn" id="btn-next" title="Next (→)">›</button>
 </div>
 
