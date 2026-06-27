@@ -8,7 +8,8 @@ __pycache__/
 .venv/
 venv/
 
-# Generated / data (chroma_data IS committed — it's the pre-built index)
+# Chroma index is built inside Docker (Linux-native), not committed to git
+chroma_data/
 
 # IDE
 .idea/claudeCodeEditorTabs.xml
